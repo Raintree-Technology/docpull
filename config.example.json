@@ -1,0 +1,11 @@
+{
+  "output_dir": "./docs",
+  "rate_limit": 0.5,
+  "skip_existing": true,
+  "log_level": "INFO",
+  "log_file": null,
+  "sources": [
+    "stripe",
+    "plaid"
+  ]
+}
