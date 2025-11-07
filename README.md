@@ -8,12 +8,12 @@ Pull documentation from the web and convert to clean markdown. Perfect for build
 
 ## Why docpull?
 
-- 🚀 **Fast** - Parallel fetching with configurable workers
-- 🎯 **Simple** - One command to pull entire documentation sites
-- 🧹 **Clean** - Converts HTML to markdown with YAML frontmatter
-- 🔧 **Flexible** - Easy to add new sources
-- 💾 **Smart** - Skip already-fetched files on re-runs
-- 📦 **Ready** - Pre-built fetchers for popular sites
+- **Fast** - Parallel fetching with configurable workers
+- **Simple** - One command to pull entire documentation sites
+- **Clean** - Converts HTML to markdown with YAML frontmatter
+- **Flexible** - Easy to add new sources
+- **Smart** - Skip already-fetched files on re-runs
+- **Ready** - Pre-built fetchers for popular sites
 
 ## Quick Start
 
@@ -51,7 +51,7 @@ pip install docpull
 pip install docpull[yaml]
 
 # From source
-git clone https://github.com/zachshallbetter/docpull.git
+git clone https://github.com/Raintree-Technology/docpull.git
 cd docpull
 pip install -e .
 ```
@@ -277,7 +277,7 @@ fetcher.fetch()
 ### Setup
 
 ```bash
-git clone https://github.com/zachshallbetter/docpull.git
+git clone https://github.com/Raintree-Technology/docpull.git
 cd docpull
 pip install -e ".[dev]"
 ```
@@ -303,7 +303,7 @@ mypy doc_fetcher/
 
 ## Pair With
 
-**[claude-starter](https://github.com/zachshallbetter/claude-starter)** - Complete Claude Code template with skills, agents, hooks, and commands. Use docpull to fetch docs, then reference them in your Claude skills!
+**[claude-starter](https://github.com/Raintree-Technology/claude-starter)** - Complete Claude Code template with skills, agents, hooks, and commands. Use docpull to fetch docs, then reference them in your Claude skills!
 
 ## Contributing
 
@@ -331,10 +331,6 @@ MIT License - See LICENSE file
 
 ## Links
 
-- **GitHub**: [zachshallbetter/docpull](https://github.com/zachshallbetter/docpull)
-- **Issues**: [Report a bug](https://github.com/zachshallbetter/docpull/issues)
+- **GitHub**: [Raintree-Technology/docpull](https://github.com/Raintree-Technology/docpull)
+- **Issues**: [Report a bug](https://github.com/Raintree-Technology/docpull/issues)
 - **PyPI**: [docpull](https://pypi.org/project/docpull/)
-
----
-
-**Pull docs. Build better.**
