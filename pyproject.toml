@@ -16,7 +16,10 @@ authors = [
 maintainers = [
     {name = "Raintree Technology", email = "support@raintree.technology"}
 ]
-keywords = ["documentation", "markdown", "web-scraping", "docs", "converter", "html2markdown", "sitemap", "documentation-tool"]
+keywords = [
+    "python", "markdown", "documentation", "web-scraping", "developer-tools",
+    "claude", "ai-training-data"
+]
 classifiers = [
     # Development Status
     "Development Status :: 4 - Beta",
@@ -36,6 +39,7 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: HTML",
     "Topic :: Text Processing :: Markup :: Markdown",
     "Topic :: Utilities",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 
     # Natural Language
     "Natural Language :: English",

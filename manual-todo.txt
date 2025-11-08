@@ -1,0 +1,173 @@
+DOCPULL SEO & DISCOVERABILITY - MANUAL TASKS
+=============================================
+
+## GITHUB SETTINGS (5 minutes)
+-------------------------------
+[ ] Add GitHub repository topics (Settings → General → Topics):
+    documentation markdown web-scraping ai-training-data claude developer-tools python stripe nextjs react
+
+[ ] Create social preview image (Settings → General → Social preview):
+    - Size: 1280x640px
+    - Include: "docpull" text, tagline "Pull docs → Clean markdown"
+    - Simple design with arrow/document icon
+    - Tool suggestion: Canva, Figma, or https://www.opengraph.xyz/
+
+[ ] Enable GitHub Discussions (Settings → Features → ✅ Discussions)
+    - For Q&A, showcases, use cases
+
+[ ] Enable GitHub Wiki (Settings → Features → ✅ Wiki)
+    - For advanced guides, recipes, integrations
+
+
+## CONTENT CREATION (30-60 minutes)
+------------------------------------
+[ ] Create terminal demo GIF/video (10 seconds):
+    - Show: pip install docpull
+    - Show: docpull --source stripe --output-dir ./docs
+    - Show: progress bar and success message
+    - Tool suggestion: asciinema, terminalizer, or screen recording
+    - Add to README after "Quick Start" section
+
+[ ] Take screenshots of example output:
+    - Show directory structure (docs/stripe/api/charges.md)
+    - Show markdown file with YAML frontmatter
+    - Add to README or create docs/images/ folder
+
+
+## AWESOME LIST SUBMISSIONS (1-2 hours)
+----------------------------------------
+Priority submissions (start with these):
+
+[ ] Awesome Claude
+    - URL: https://github.com/anthropics/awesome-claude-projects
+    - Pitch: "Perfect for building Claude Code skills with local documentation"
+    - Category: Developer Tools or Documentation
+    - Example use case: docpull --source stripe → use in .claude/skills/
+
+[ ] Awesome Python
+    - URL: https://github.com/vinta/awesome-python
+    - Category: Web Scraping or Documentation Tools
+    - Highlight: Clean API, type hints, 95%+ test coverage, modern packaging
+
+[ ] Awesome Web Scraping
+    - URL: https://github.com/lorien/awesome-web-scraping
+    - Category: Python tools
+    - Focus: Parallel fetching, sitemap support, rate limiting, respectful scraping
+
+[ ] Awesome AI Tools
+    - URL: https://github.com/mahseema/awesome-ai-tools
+    - Category: Training Data or Developer Tools
+    - Angle: Building AI training datasets from documentation
+
+[ ] Awesome CLI Apps
+    - URL: https://github.com/agarrharr/awesome-cli-apps
+    - Category: Developer Tools
+    - Highlight: Simple, powerful, well-tested CLI
+
+[ ] Awesome Documentation Tools
+    - Search GitHub for: "awesome documentation tools"
+    - Multiple repos exist - submit to top ones
+
+[ ] Python Weekly Newsletter
+    - URL: https://www.pythonweekly.com/
+    - Submit your project for consideration
+
+
+## SOCIAL MEDIA & PROMOTION (1-2 hours)
+-----------------------------------------
+[ ] Twitter/X announcement:
+    - Tag @AnthropicAI and mention Claude
+    - Example: "Built docpull - pull docs from Stripe, Next.js, React & more, convert to markdown. Perfect for building Claude Code skills 🚀"
+    - Include demo GIF/screenshot
+    - Use hashtags: #Python #Claude #AI #Documentation
+
+[ ] Reddit posts:
+    - r/Python - "Show & Tell" flair
+    - r/ClaudeAI - showcase use case with Claude Code
+    - r/MachineLearning - angle: building training datasets
+    - r/programming - if you have good demo/story
+
+[ ] Hacker News:
+    - Title: "Show HN: docpull – Pull documentation sites and convert to markdown"
+    - URL: https://github.com/raintree-technology/docpull
+    - Best posted on weekday mornings (US time)
+
+[ ] Dev.to article:
+    - "How to Build AI Training Data from Documentation Sites"
+    - "Building Claude Code Skills with Local Documentation"
+    - Include code examples, use cases
+
+[ ] Product Hunt (optional):
+    - Create product page
+    - Launch on a Tuesday or Wednesday
+    - Need: tagline, description, demo, screenshots
+
+
+## INTEGRATION EXAMPLES (ongoing)
+----------------------------------
+[ ] Add example integration with claude-starter:
+    - Create docs/examples/claude-code-integration.md
+    - Show how to use docpull output in .claude/skills/
+
+[ ] Create video tutorial (YouTube):
+    - "Getting Started with docpull"
+    - "Building Claude Code Skills with docpull"
+    - 5-10 minutes, casual screen recording
+
+[ ] Write blog post about use cases:
+    - Building AI training datasets
+    - Local documentation workflow
+    - Offline development
+
+
+## MONITORING & ITERATION (ongoing)
+------------------------------------
+[ ] Set up Google Alerts for "docpull"
+
+[ ] Monitor GitHub stars/forks weekly
+
+[ ] Track PyPI download stats: https://pypistats.org/packages/docpull
+
+[ ] Respond to issues/PRs promptly (within 24-48 hours)
+
+[ ] Add "Used By" section when you get users:
+    - Ask users to submit their use cases
+    - Add testimonials to README
+
+[ ] Monitor awesome list acceptance:
+    - Follow up on PRs after 1 week
+    - Be respectful and patient
+
+
+## FUTURE ENHANCEMENTS (backlog)
+---------------------------------
+[ ] Add more documentation sources (based on user requests)
+
+[ ] Create interactive documentation site (GitHub Pages)
+
+[ ] Add Homebrew formula for macOS users
+
+[ ] Create Docker image for containerized usage
+
+[ ] Add telemetry/analytics (opt-in) to understand usage patterns
+
+[ ] Create VS Code extension for docpull integration
+
+
+## NOTES
+--------
+- Start with GitHub settings (easiest wins)
+- Focus on awesome-claude first (most relevant audience)
+- Be genuine and helpful in communities - no spam
+- Quality over quantity - better to do 2-3 things well than rush everything
+- Update this list as you complete items
+- Add notes on what worked well vs. what didn't
+
+
+COMPLETED PROGRAMMATICALLY:
+---------------------------
+[✓] Added improved badges to README (downloads, GitHub stars, better license link)
+[✓] Added comparison table to README (vs wget/curl, scrapy, custom scripts)
+[✓] Added "Featured In" section to README with awesome list targets
+[✓] Updated pyproject.toml keywords (python, markdown, documentation, web-scraping, etc.)
+[✓] Added AI classifier to pyproject.toml

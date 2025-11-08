@@ -3,12 +3,14 @@
 Pull documentation from the web and convert to clean markdown. Perfect for building AI training data, local documentation, or Claude Code skills.
 
 [![PyPI version](https://badge.fury.io/py/docpull.svg)](https://badge.fury.io/py/docpull)
+[![Downloads](https://pepy.tech/badge/docpull)](https://pepy.tech/project/docpull)
 [![Tests](https://github.com/raintree-technology/docpull/actions/workflows/test.yml/badge.svg)](https://github.com/raintree-technology/docpull/actions/workflows/test.yml)
 [![Security](https://github.com/raintree-technology/docpull/actions/workflows/security.yml/badge.svg)](https://github.com/raintree-technology/docpull/actions/workflows/security.yml)
 [![codecov](https://codecov.io/gh/raintree-technology/docpull/branch/main/graph/badge.svg)](https://codecov.io/gh/raintree-technology/docpull)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/github/license/raintree-technology/docpull)](https://github.com/raintree-technology/docpull/blob/main/LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![GitHub stars](https://img.shields.io/github/stars/raintree-technology/docpull?style=social)](https://github.com/raintree-technology/docpull)
 
 ## Why docpull?
 
@@ -18,6 +20,19 @@ Pull documentation from the web and convert to clean markdown. Perfect for build
 - Flexible - Easy to add new sources
 - Smart - Skip already-fetched files on re-runs
 - Ready - Pre-built fetchers for popular sites
+
+### Comparison
+
+| Feature | docpull | wget/curl | scrapy | custom scripts |
+|---------|---------|-----------|--------|----------------|
+| One-line install | ✅ | ✅ | ✅ | ❌ |
+| Markdown output | ✅ | ❌ | ❌ | Maybe |
+| YAML frontmatter | ✅ | ❌ | ❌ | Maybe |
+| Parallel fetching | ✅ | ❌ | ✅ | Maybe |
+| Pre-built sources | ✅ | ❌ | ❌ | ❌ |
+| Rate limiting | ✅ | ❌ | ✅ | Maybe |
+| Skip existing files | ✅ | ❌ | ❌ | Maybe |
+| Python API | ✅ | ❌ | ✅ | N/A |
 
 ## Quick Start
 
@@ -384,6 +399,16 @@ Need help? See our [Support Guide](SUPPORT.md) for:
 - [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
 - [SECURITY.md](SECURITY.md) - Security policy and reporting
 - [SUPPORT.md](SUPPORT.md) - Getting help
+
+## Featured In
+
+Want to see docpull featured in awesome lists? Submit a PR to:
+- [Awesome Claude](https://github.com/anthropics/awesome-claude-projects) - Claude AI tools and projects
+- [Awesome Python](https://github.com/vinta/awesome-python) - Python frameworks and libraries
+- [Awesome Web Scraping](https://github.com/lorien/awesome-web-scraping) - Web scraping tools
+- [Awesome AI Tools](https://github.com/mahseema/awesome-ai-tools) - AI and machine learning tools
+
+If you've featured docpull in a blog post, video, or list, [open an issue](https://github.com/raintree-technology/docpull/issues) and we'll add it here!
 
 ## License
 
