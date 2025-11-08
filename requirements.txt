@@ -1,7 +1,7 @@
 # Core dependencies
 requests==2.32.5
 beautifulsoup4==4.14.2
-html2text==2024.2.26
+html2text==2025.4.15
 certifi>=2024.2.2
 
 # Optional YAML support
