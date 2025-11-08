@@ -1,0 +1,78 @@
+name: Auto-label Issues and PRs
+
+on:
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  label-issues:
+    name: Label Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues'
+    steps:
+      - name: Label bug reports
+        if: contains(github.event.issue.body, 'bug') || contains(github.event.issue.title, 'bug') || contains(github.event.issue.title, 'error') || contains(github.event.issue.title, 'fix')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['bug']
+            })
+
+      - name: Label feature requests
+        if: contains(github.event.issue.body, 'feature') || contains(github.event.issue.title, 'feature') || contains(github.event.issue.title, 'add') || contains(github.event.issue.title, 'support')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['enhancement']
+            })
+
+      - name: Label documentation issues
+        if: contains(github.event.issue.body, 'documentation') || contains(github.event.issue.title, 'docs') || contains(github.event.issue.title, 'documentation')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['documentation']
+            })
+
+      - name: Label new source requests
+        if: contains(github.event.issue.body, 'SOURCE') || contains(github.event.issue.title, 'source') || contains(github.event.issue.title, 'fetcher')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['new-source', 'enhancement']
+            })
+
+  label-prs:
+    name: Label Pull Requests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Label based on changed files
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

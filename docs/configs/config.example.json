@@ -1,0 +1,21 @@
+{
+  "_comment": "Example configuration file for docpull",
+  "output_dir": "./docs",
+  "rate_limit": 0.5,
+  "skip_existing": true,
+  "log_level": "INFO",
+  "log_file": null,
+  "_sources_available": [
+    "stripe (Stripe API & payment documentation)",
+    "plaid (Plaid API & banking documentation)",
+    "nextjs (Next.js framework documentation)",
+    "d3 (D3.js data visualization library)",
+    "bun (Bun JavaScript runtime)",
+    "tailwind (Tailwind CSS framework)",
+    "react (React JavaScript library)"
+  ],
+  "sources": [
+    "stripe",
+    "nextjs"
+  ]
+}

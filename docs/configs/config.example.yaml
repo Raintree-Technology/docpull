@@ -1,0 +1,30 @@
+# Example configuration file for docpull
+# Copy this to config.yaml and customize as needed
+
+# Directory to save fetched documentation
+output_dir: ./docs
+
+# Seconds to wait between requests (be respectful to servers)
+rate_limit: 0.5
+
+# Skip files that already exist (set to false to re-fetch)
+skip_existing: true
+
+# Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+log_level: INFO
+
+# Optional: Write logs to a file
+# log_file: ./docpull.log
+
+# Documentation sources to fetch
+# Available sources:
+#   - stripe    (Stripe API & payment documentation)
+#   - plaid     (Plaid API & banking documentation)
+#   - nextjs    (Next.js framework documentation)
+#   - d3        (D3.js data visualization library)
+#   - bun       (Bun JavaScript runtime)
+#   - tailwind  (Tailwind CSS framework)
+#   - react     (React JavaScript library)
+sources:
+  - stripe
+  - nextjs
