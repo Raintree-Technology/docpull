@@ -1,0 +1,75 @@
+[bandit]
+exclude_dirs = [
+    '/tests',
+    '/venv',
+    '/.venv',
+    '/build',
+    '/dist',
+]
+
+# Tests to run
+tests = [
+    'B201',  # Flask debug
+    'B301',  # Pickle
+    'B302',  # Marshal
+    'B303',  # MD5/SHA1
+    'B304',  # Insecure cipher
+    'B305',  # Insecure cipher mode
+    'B306',  # Insecure mktemp
+    'B307',  # eval
+    'B308',  # mark_safe
+    'B309',  # HTTPSConnection
+    'B310',  # urllib urlopen
+    'B311',  # Random
+    'B312',  # Telnet
+    'B313',  # XML
+    'B314',  # XML
+    'B315',  # XML
+    'B316',  # XML
+    'B317',  # XML
+    'B318',  # XML
+    'B319',  # XML
+    'B320',  # XML
+    'B321',  # FTP
+    'B322',  # Input
+    'B323',  # Unverified context
+    'B324',  # Insecure hash
+    'B325',  # Tempfile
+    'B401',  # Import telnet
+    'B402',  # Import ftplib
+    'B403',  # Import pickle
+    'B404',  # Import subprocess
+    'B405',  # Import xml
+    'B406',  # Import mktemp
+    'B407',  # Eval
+    'B408',  # XML
+    'B409',  # XML
+    'B410',  # XML
+    'B411',  # XML
+    'B412',  # XML
+    'B413',  # Crypto
+    'B501',  # SSL
+    'B502',  # SSL
+    'B503',  # SSL
+    'B504',  # SSL
+    'B505',  # Weak crypto
+    'B506',  # YAML
+    'B507',  # SSH
+    'B601',  # Shell injection
+    'B602',  # Shell injection
+    'B603',  # Shell injection
+    'B604',  # Shell injection
+    'B605',  # Shell injection
+    'B606',  # Shell injection
+    'B607',  # Shell injection
+    'B608',  # SQL injection
+    'B609',  # Wildcard injection
+    'B610',  # SQL injection
+    'B611',  # SQL injection
+    'B701',  # Jinja2
+    'B702',  # Mako
+    'B703',  # Django
+]
+
+# Ignore specific issues
+skips = []

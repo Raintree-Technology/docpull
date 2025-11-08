@@ -48,3 +48,4 @@ htmlcov/
 *.log
 .env
 .env.local
+.claude/

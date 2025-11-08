@@ -1,7 +1,8 @@
 # Core dependencies
-requests>=2.31.0
-beautifulsoup4>=4.12.0
-html2text>=2020.1.16
+requests==2.32.3
+beautifulsoup4==4.12.3
+html2text==2024.2.26
+certifi>=2024.2.2
 
 # Optional YAML support
 pyyaml>=6.0

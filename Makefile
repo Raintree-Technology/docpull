@@ -1,20 +1,22 @@
-.PHONY: help install install-dev clean test format lint type-check docs run example config
+.PHONY: help install install-dev clean test test-cov format lint type-check security check all build example
 
 help:
-	@echo "doc_fetcher - Documentation Fetcher"
+	@echo "docpull - Pull documentation from the web"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  install       - Install package"
 	@echo "  install-dev   - Install package with dev dependencies"
 	@echo "  clean         - Remove build artifacts and cache files"
-	@echo "  test          - Run tests (when implemented)"
+	@echo "  test          - Run tests"
+	@echo "  test-cov      - Run tests with coverage report"
 	@echo "  format        - Format code with black"
 	@echo "  lint          - Lint code with ruff"
 	@echo "  type-check    - Type check with mypy"
-	@echo "  run           - Run doc-fetcher"
-	@echo "  example       - Run example usage script"
-	@echo "  config        - Generate sample config file"
-	@echo "  docs          - Generate documentation (when implemented)"
+	@echo "  security      - Run security scans (bandit, pip-audit)"
+	@echo "  check         - Run all checks (format, lint, type-check, security)"
+	@echo "  all           - Run all checks and tests"
+	@echo "  build         - Build distribution packages"
+	@echo "  example       - Run example scripts"
 
 install:
 	pip install -e .
@@ -29,34 +31,41 @@ clean:
 	rm -rf .pytest_cache/
 	rm -rf .mypy_cache/
 	rm -rf .ruff_cache/
+	rm -rf htmlcov/
+	rm -rf .coverage
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 	find . -type f -name "*.pyo" -delete
 
 test:
-	@echo "Tests not yet implemented"
-	@echo "Run: pytest tests/"
+	pytest tests/
+
+test-cov:
+	pytest --cov=docpull --cov-report=html --cov-report=term
 
 format:
-	black doc_fetcher/ example_usage.py
+	black docpull/ tests/ docs/examples/
 
 lint:
-	ruff check doc_fetcher/ example_usage.py
+	ruff check docpull/ tests/ docs/examples/
 
 type-check:
-	mypy doc_fetcher/
+	mypy docpull/
 
-run:
-	doc-fetcher
+security:
+	@echo "Running security scans..."
+	bandit -r docpull/
+	pip-audit
+
+check: format lint type-check security
+	@echo "All checks passed!"
+
+all: check test
+	@echo "All checks and tests passed!"
+
+build:
+	python -m build
 
 example:
-	python example_usage.py
-
-config:
-	doc-fetcher --generate-config config.yaml
-	@echo ""
-	@echo "Sample config generated: config.yaml"
-	@echo "Edit it and run: doc-fetcher --config config.yaml"
-
-docs:
-	@echo "See DOC_FETCHER_README.md for documentation"
+	@echo "Running basic example:"
+	python docs/examples/basic_usage.py --help

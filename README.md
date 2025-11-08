@@ -3,17 +3,21 @@
 Pull documentation from the web and convert to clean markdown. Perfect for building AI training data, local documentation, or Claude Code skills.
 
 [![PyPI version](https://badge.fury.io/py/docpull.svg)](https://badge.fury.io/py/docpull)
+[![Tests](https://github.com/raintree-technology/docpull/actions/workflows/test.yml/badge.svg)](https://github.com/raintree-technology/docpull/actions/workflows/test.yml)
+[![Security](https://github.com/raintree-technology/docpull/actions/workflows/security.yml/badge.svg)](https://github.com/raintree-technology/docpull/actions/workflows/security.yml)
+[![codecov](https://codecov.io/gh/raintree-technology/docpull/branch/main/graph/badge.svg)](https://codecov.io/gh/raintree-technology/docpull)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ## Why docpull?
 
-- **Fast** - Parallel fetching with configurable workers
-- **Simple** - One command to pull entire documentation sites
-- **Clean** - Converts HTML to markdown with YAML frontmatter
-- **Flexible** - Easy to add new sources
-- **Smart** - Skip already-fetched files on re-runs
-- **Ready** - Pre-built fetchers for popular sites
+- Fast - Parallel fetching with configurable workers
+- Simple - One command to pull entire documentation sites
+- Clean - Converts HTML to markdown with YAML frontmatter
+- Flexible - Easy to add new sources
+- Smart - Skip already-fetched files on re-runs
+- Ready - Pre-built fetchers for popular sites
 
 ## Quick Start
 
@@ -22,24 +26,21 @@ Pull documentation from the web and convert to clean markdown. Perfect for build
 pip install docpull
 
 # Pull documentation
-docpull --source stripe --output ./docs/stripe
-docpull --source nextjs --output ./docs/nextjs
-
-# That's it!
+docpull --source stripe --output-dir ./docs
+docpull --source nextjs --output-dir ./docs
 ```
 
 ## Supported Sources
 
 | Source | Description | Content |
 |--------|-------------|---------|
-| **stripe** | Stripe API & Guides | Payment processing, billing, webhooks |
-| **nextjs** | Next.js Docs | App Router, Server Components, API routes |
-| **plaid** | Plaid API | Banking data, transactions, accounts |
-| **bun** | Bun Runtime | Runtime, bundler, package manager |
-| **d3** | D3.js | Data visualization library |
-| **supabase** | Supabase | Database, auth, storage, edge functions |
-| **tailwind** | Tailwind CSS | Utility-first CSS framework |
-| **react** | React | JavaScript UI library |
+| stripe | Stripe API & Guides | Payment processing, billing, webhooks |
+| nextjs | Next.js Docs | App Router, Server Components, API routes |
+| plaid | Plaid API | Banking data, transactions, accounts |
+| bun | Bun Runtime | Runtime, bundler, package manager |
+| d3 | D3.js | Data visualization library |
+| tailwind | Tailwind CSS | Utility-first CSS framework |
+| react | React | JavaScript UI library |
 
 ## Installation
 
@@ -51,7 +52,7 @@ pip install docpull
 pip install docpull[yaml]
 
 # From source
-git clone https://github.com/Raintree-Technology/docpull.git
+git clone https://github.com/raintree-technology/docpull.git
 cd docpull
 pip install -e .
 ```
@@ -62,10 +63,16 @@ pip install -e .
 
 ```bash
 # Basic usage
-docpull --source stripe --output ./docs/stripe
+docpull --source stripe --output-dir ./docs
 
-# With custom delay (be respectful!)
-docpull --source nextjs --output ./docs/nextjs --delay 1.0
+# With custom rate limit (be respectful!)
+docpull --source nextjs --output-dir ./docs --rate-limit 1.0
+
+# Preview what would be fetched (dry run)
+docpull --source react --dry-run
+
+# Verbose output for debugging
+docpull --source plaid --output-dir ./docs --verbose
 
 # Using config file
 docpull --config config.yaml
@@ -74,12 +81,13 @@ docpull --config config.yaml
 ### Python API
 
 ```python
-from doc_fetcher.fetchers import StripeFetcher
+# Import docpull
+from docpull import StripeFetcher
 
 # Pull Stripe docs
 fetcher = StripeFetcher(
-    output_dir="./docs/stripe",
-    delay=0.5,
+    output_dir="./docs",
+    rate_limit=0.5,
     skip_existing=True
 )
 fetcher.fetch()
@@ -87,29 +95,41 @@ fetcher.fetch()
 
 ### Configuration File
 
-Create `docpull.yaml`:
+Generate a config file:
+```bash
+docpull --generate-config config.yaml
+```
+
+Or create `config.yaml` manually:
 
 ```yaml
-sources:
-  stripe:
-    output_dir: ./docs/stripe
-    delay: 0.5
-    skip_existing: true
+# Output directory (source names will be appended automatically)
+output_dir: ./docs
 
-  nextjs:
-    output_dir: ./docs/nextjs
-    delay: 0.3
-    skip_existing: true
+# Rate limiting (seconds between requests)
+rate_limit: 0.5
+
+# Skip already-downloaded files
+skip_existing: true
+
+# Logging level
+log_level: INFO
+
+# Sources to fetch
+sources:
+  - stripe
+  - nextjs
+  - react
 ```
 
 Run with:
 ```bash
-docpull --config docpull.yaml
+docpull --config config.yaml
 ```
 
 ## Output Format
 
-Each page is saved as markdown with YAML frontmatter:
+docpull saves each page as clean markdown with YAML frontmatter metadata:
 
 ```markdown
 ---
@@ -123,7 +143,7 @@ fetched_at: 2025-11-06T12:00:00
 Your documentation content here...
 ```
 
-Files are organized by URL structure:
+docpull organizes files by URL structure, making them easy to navigate:
 
 ```
 docs/
@@ -173,7 +193,7 @@ docpull --source plaid --output ./training-data/plaid
 ### Documentation Analysis
 
 ```python
-from doc_fetcher.fetchers import StripeFetcher
+from docpull.fetchers import StripeFetcher
 import os
 
 # Fetch docs
@@ -193,7 +213,7 @@ for root, dirs, files in os.walk("./analysis"):
 ### Basic Fetcher
 
 ```python
-from doc_fetcher.fetchers.base import BaseFetcher
+from docpull.fetchers.base import BaseFetcher
 
 class MyDocsFetcher(BaseFetcher):
     def __init__(self, output_dir="./docs/mydocs", **kwargs):
@@ -212,7 +232,7 @@ class MyDocsFetcher(BaseFetcher):
 ### Parallel Fetcher (Faster)
 
 ```python
-from doc_fetcher.fetchers.parallel_base import ParallelBaseFetcher
+from docpull.fetchers.parallel_base import ParallelBaseFetcher
 
 class MyFastFetcher(ParallelBaseFetcher):
     def __init__(self, output_dir="./docs/mydocs", max_workers=20, **kwargs):
@@ -263,7 +283,7 @@ fetcher = StripeFetcher(
 ### Parallel Processing
 
 ```python
-from doc_fetcher.fetchers import NextJSFetcher
+from docpull.fetchers import NextJSFetcher
 
 fetcher = NextJSFetcher(
     output_dir="./docs/nextjs",
@@ -277,7 +297,7 @@ fetcher.fetch()
 ### Setup
 
 ```bash
-git clone https://github.com/Raintree-Technology/docpull.git
+git clone https://github.com/raintree-technology/docpull.git
 cd docpull
 pip install -e ".[dev]"
 ```
@@ -292,45 +312,87 @@ pytest
 
 ```bash
 # Format
-black doc_fetcher/
+black docpull/
 
 # Lint
-ruff check doc_fetcher/
+ruff check docpull/
 
 # Type check
-mypy doc_fetcher/
+mypy docpull/
 ```
 
 ## Pair With
 
-**[claude-starter](https://github.com/Raintree-Technology/claude-starter)** - Complete Claude Code template with skills, agents, hooks, and commands. Use docpull to fetch docs, then reference them in your Claude skills!
+[claude-starter](https://github.com/raintree-technology/claude-starter) - Complete Claude Code template with skills, agents, hooks, and commands. Use docpull to fetch docs, then reference them in your Claude skills.
+
+## Examples
+
+See the `docs/examples/` directory for more examples:
+
+- [basic_usage.py](docs/examples/basic_usage.py) - Simple examples and CLI wrapper
+- [advanced_usage.py](docs/examples/advanced_usage.py) - Config files, error handling, and advanced patterns
+
+Example config files:
+- [config.example.yaml](docs/configs/config.example.yaml) - YAML configuration template
+- [config.example.json](docs/configs/config.example.json) - JSON configuration template
 
 ## Contributing
 
-Contributions welcome!
+Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-### Ideas
+### Quick Start for Contributors
 
-- New documentation sources
-- Better HTML to Markdown conversion
-- Performance improvements
-- More comprehensive tests
+1. Fork and clone the repository
+2. Create a virtual environment and install dev dependencies
+3. Make your changes and add tests
+4. Run tests and linters
+5. Submit a pull request
 
-### Adding a Source
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions on:
+- Adding new documentation sources
+- Writing tests
+- Code style guidelines
+- Development workflow
 
-1. Create `doc_fetcher/fetchers/your_source.py`
-2. Extend `BaseFetcher` or `ParallelBaseFetcher`
-3. Implement `fetch()` method
-4. Register in `doc_fetcher/fetchers/__init__.py`
-5. Add tests
-6. Submit PR!
+## Maintenance
+
+This package is fully automated with minimal maintenance required:
+- Automatic releases to PyPI when you push a tag
+- Automatic dependency updates (Dependabot)
+- Automatic issue labeling and stale issue closing
+- Multi-platform CI/CD testing on every commit
+
+See [MAINTENANCE.md](MAINTENANCE.md) for details on the automated workflows.
+
+To release: `bump2version patch && git push origin --tags`
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
+
+## Support
+
+Need help? See our [Support Guide](SUPPORT.md) for:
+- Documentation and resources
+- How to ask questions
+- Reporting bugs and requesting features
+- Community support options
+
+## Community
+
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Guidelines for participation
+- [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
+- [SECURITY.md](SECURITY.md) - Security policy and reporting
+- [SUPPORT.md](SUPPORT.md) - Getting help
 
 ## License
 
-MIT License - See LICENSE file
+MIT License - See [LICENSE](LICENSE) file
 
 ## Links
 
-- **GitHub**: [Raintree-Technology/docpull](https://github.com/Raintree-Technology/docpull)
-- **Issues**: [Report a bug](https://github.com/Raintree-Technology/docpull/issues)
-- **PyPI**: [docpull](https://pypi.org/project/docpull/)
+- GitHub: [raintree-technology/docpull](https://github.com/raintree-technology/docpull)
+- PyPI: [docpull](https://pypi.org/project/docpull/)
+- Issues: [Report a bug](https://github.com/raintree-technology/docpull/issues)
+- Discussions: [GitHub Discussions](https://github.com/raintree-technology/docpull/discussions)
+- Changelog: [Release Notes](https://github.com/raintree-technology/docpull/blob/main/CHANGELOG.md)

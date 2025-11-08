@@ -66,21 +66,24 @@ dependencies = [
 yaml = ["pyyaml>=6.0"]
 dev = [
     "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
     "black>=23.0.0",
     "mypy>=1.0.0",
     "ruff>=0.1.0",
+    "bandit>=1.7.0",
+    "pip-audit>=2.0.0",
 ]
 
 [project.scripts]
-docpull = "doc_fetcher.cli:main"
+docpull = "docpull.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/Raintree-Technology/docpull"
-Documentation = "https://github.com/Raintree-Technology/docpull#readme"
-Repository = "https://github.com/Raintree-Technology/docpull"
-"Source Code" = "https://github.com/Raintree-Technology/docpull"
-"Bug Tracker" = "https://github.com/Raintree-Technology/docpull/issues"
-"Changelog" = "https://github.com/Raintree-Technology/docpull/releases"
+Homepage = "https://github.com/raintree-technology/docpull"
+Documentation = "https://github.com/raintree-technology/docpull#readme"
+Repository = "https://github.com/raintree-technology/docpull"
+"Source Code" = "https://github.com/raintree-technology/docpull"
+"Bug Tracker" = "https://github.com/raintree-technology/docpull/issues"
+"Changelog" = "https://github.com/raintree-technology/docpull/blob/main/CHANGELOG.md"
 
 [tool.black]
 line-length = 110
@@ -91,7 +94,37 @@ line-length = 110
 target-version = "py38"
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--showlocals",
+]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+
+[tool.coverage.run]
+source = ["docpull"]
+omit = ["tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]

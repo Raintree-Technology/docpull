@@ -1,0 +1,26 @@
+# Configuration for the labeler action
+# Automatically labels PRs based on changed files
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file: ['*.md', 'docs/**/*']
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file: ['tests/**/*', '**/test_*.py']
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file: ['requirements*.txt', 'pyproject.toml']
+
+ci-cd:
+  - changed-files:
+    - any-glob-to-any-file: ['.github/**/*', 'Makefile']
+
+fetchers:
+  - changed-files:
+    - any-glob-to-any-file: ['docpull/fetchers/**/*']
+
+config:
+  - changed-files:
+    - any-glob-to-any-file: ['docpull/config.py', 'docs/configs/**/*']
