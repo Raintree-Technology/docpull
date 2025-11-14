@@ -1,0 +1,166 @@
+[build-system]
+requires = ["setuptools>=77.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docpull"
+version = "1.0.2"
+description = "Pull documentation from the web and convert to clean markdown"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    {name = "Zachary Roth", email = "support@raintree.technology"}
+]
+maintainers = [
+    {name = "Raintree Technology", email = "support@raintree.technology"}
+]
+keywords = [
+    "python", "markdown", "documentation", "web-scraping", "developer-tools",
+    "claude", "ai-training-data"
+]
+classifiers = [
+    # Development Status
+    "Development Status :: 5 - Production/Stable",
+
+    # Intended Audience
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+
+    # Environment
+    "Environment :: Console",
+
+    # Topic
+    "Topic :: Documentation",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Text Processing :: Markup :: HTML",
+    "Topic :: Text Processing :: Markup :: Markdown",
+    "Topic :: Utilities",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+
+    # Natural Language
+    "Natural Language :: English",
+
+    # Operating System
+    "Operating System :: OS Independent",
+
+    # Programming Language
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+
+    # Typing
+    "Typing :: Typed",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "html2text>=2020.1.16",
+    "defusedxml>=0.7.1",
+    "aiohttp>=3.9.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6.0"]
+js = [
+    "playwright>=1.40.0",
+]
+all = [
+    "pyyaml>=6.0",
+    "playwright>=1.40.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+    "bandit>=1.7.0",
+    "pip-audit>=2.0.0",
+    "types-requests>=2.31.0",
+    "types-beautifulsoup4>=4.12.0",
+    "types-defusedxml>=0.7.0",
+]
+
+[project.scripts]
+docpull = "docpull.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/raintree-technology/docpull"
+Documentation = "https://github.com/raintree-technology/docpull#readme"
+Repository = "https://github.com/raintree-technology/docpull"
+"Source Code" = "https://github.com/raintree-technology/docpull"
+"Bug Tracker" = "https://github.com/raintree-technology/docpull/issues"
+"Changelog" = "https://github.com/raintree-technology/docpull/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["docpull*"]
+
+[tool.setuptools.package-data]
+docpull = ["py.typed"]
+
+[tool.black]
+line-length = 110
+target-version = ["py39", "py310", "py311", "py312", "py313"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+strict_equality = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = "playwright.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "-ra",
+    "--showlocals",
+]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+
+[tool.coverage.run]
+source = ["docpull"]
+omit = ["tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
