@@ -30,6 +30,7 @@ Unlike tools like wget or httrack, docpull extracts only the main content, remov
 
 ```bash
 pip install docpull
+docpull --doctor         # verify installation
 docpull https://aptos.dev
 docpull stripe           # use a built-in profile
 docpull https://site.com/docs --max-pages 100 --max-concurrent 20
@@ -59,6 +60,7 @@ fetcher.fetch()
 
 ## Common Options
 
+- `--doctor` – verify installation and dependencies
 - `--max-pages N` – limit crawl size
 - `--max-depth N` – restrict link depth
 - `--max-concurrent N` – control parallel fetches
@@ -133,9 +135,13 @@ MY_PROFILE = SiteProfile(
 
 ## Troubleshooting
 
+- **Installation issues**: Run `docpull --doctor` to diagnose problems
+- **Missing dependencies**: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common fixes
 - **Site requires JS**: install Playwright + `--js`
 - **Slow or rate limited**: lower concurrency or raise `--rate-limit`
 - **Large sites**: set `--max-pages`
+
+For detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Links
 

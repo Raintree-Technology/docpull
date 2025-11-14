@@ -3,6 +3,40 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+# Check if --doctor flag is present before checking dependencies
+# This allows users to diagnose issues even when dependencies are missing
+if "--doctor" in sys.argv:
+    from .doctor import run_doctor
+
+    # Parse output dir if provided
+    output_dir = None
+    if "--output-dir" in sys.argv or "-o" in sys.argv:
+        try:
+            flag_idx = sys.argv.index("--output-dir") if "--output-dir" in sys.argv else sys.argv.index("-o")
+            if flag_idx + 1 < len(sys.argv):
+                output_dir = Path(sys.argv[flag_idx + 1])
+        except (ValueError, IndexError):
+            pass
+    sys.exit(run_doctor(output_dir=output_dir))
+
+# Verify core dependencies are available
+try:
+    import aiohttp  # noqa: F401
+    import bs4  # noqa: F401
+    import defusedxml  # noqa: F401
+    import html2text  # noqa: F401
+    import requests  # noqa: F401
+    import rich  # noqa: F401
+except ImportError as e:
+    print(f"\nERROR: Missing required dependency: {e.name}", file=sys.stderr)
+    print("\nDocpull requires all core dependencies to be installed.", file=sys.stderr)
+    print("\nRecommended fixes:", file=sys.stderr)
+    print("  1. For pipx users: pipx reinstall docpull --force", file=sys.stderr)
+    print("  2. For pip users: pip install --upgrade --force-reinstall docpull", file=sys.stderr)
+    print("  3. For development: pip install -e .[dev]", file=sys.stderr)
+    print("\nTo diagnose issues, run: docpull --doctor", file=sys.stderr)
+    sys.exit(1)
+
 from . import __version__
 from .config import FetcherConfig
 from .fetchers import (
@@ -185,6 +219,12 @@ Examples:
         version=f"%(prog)s {__version__}",
     )
 
+    parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Run diagnostic checks to verify installation",
+    )
+
     return parser
 
 
@@ -200,17 +240,31 @@ def generate_sample_config(output_path: Path) -> None:
     # Determine format from extension
     suffix = output_path.suffix.lower()
 
-    if suffix in [".yaml", ".yml"]:
-        config.save_yaml(output_path)
-        print(f"Sample YAML config generated: {output_path}")
-    elif suffix == ".json":
-        config.save_json(output_path)
-        print(f"Sample JSON config generated: {output_path}")
-    else:
-        print(f"Warning: Unknown extension {suffix}, generating YAML")
-        output_path = output_path.with_suffix(".yaml")
-        config.save_yaml(output_path)
-        print(f"Sample YAML config generated: {output_path}")
+    try:
+        if suffix in [".yaml", ".yml"]:
+            config.save_yaml(output_path)
+            print(f"Sample YAML config generated: {output_path}")
+        elif suffix == ".json":
+            config.save_json(output_path)
+            print(f"Sample JSON config generated: {output_path}")
+        else:
+            # Try YAML first, fall back to JSON if PyYAML not available
+            try:
+                print(f"Warning: Unknown extension {suffix}, generating YAML")
+                output_path = output_path.with_suffix(".yaml")
+                config.save_yaml(output_path)
+                print(f"Sample YAML config generated: {output_path}")
+            except ImportError:
+                print("PyYAML not installed, generating JSON instead")
+                output_path = output_path.with_suffix(".json")
+                config.save_json(output_path)
+                print(f"Sample JSON config generated: {output_path}")
+    except ImportError:
+        print("\nERROR: PyYAML is required for YAML config files")
+        print("Install it with: pip install docpull[yaml]")
+        print("\nAlternatively, use JSON format:")
+        print(f"  docpull --generate-config {output_path.with_suffix('.json')}")
+        raise
 
 
 def get_config(args: argparse.Namespace) -> FetcherConfig:
@@ -224,7 +278,17 @@ def get_config(args: argparse.Namespace) -> FetcherConfig:
         FetcherConfig instance
     """
     # Load from config file if provided
-    config = FetcherConfig.from_file(args.config) if args.config else FetcherConfig()
+    if args.config:
+        try:
+            config = FetcherConfig.from_file(args.config)
+        except ImportError as e:
+            print(f"\nERROR: Error loading config file: {e}")
+            if "yaml" in str(e).lower() or "pyyaml" in str(e).lower():
+                print("Install PyYAML with: pip install docpull[yaml]")
+                print("\nAlternatively, convert your config to JSON format")
+            raise
+    else:
+        config = FetcherConfig()
 
     # Override with command-line arguments
     if args.output_dir is not None:
@@ -410,6 +474,13 @@ def main(argv: Optional[list[str]] = None) -> int:
     """
     parser = create_parser()
     args = parser.parse_args(argv)
+
+    # Handle --doctor
+    if args.doctor:
+        from .doctor import run_doctor
+
+        output_dir = Path(args.output_dir) if args.output_dir else None
+        return run_doctor(output_dir=output_dir)
 
     # Handle --generate-config
     if args.generate_config:

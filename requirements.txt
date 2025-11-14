@@ -1,0 +1,29 @@
+# Core dependencies for docpull
+# These are required for basic functionality
+#
+# This file mirrors the dependencies in pyproject.toml for transparency
+# Install with: pip install -r requirements.txt
+# Or preferably: pip install docpull
+
+# HTTP client
+requests>=2.31.0
+
+# HTML parsing
+beautifulsoup4>=4.12.0
+
+# HTML to Markdown conversion
+html2text>=2020.1.16
+
+# Secure XML parsing
+defusedxml>=0.7.1
+
+# Async HTTP client
+aiohttp>=3.9.0
+
+# Terminal formatting and progress bars
+rich>=13.0.0
+
+# Optional dependencies (install separately if needed):
+# - YAML support: pip install pyyaml>=6.0
+# - JavaScript rendering: pip install playwright>=1.40.0
+# - All optional: pip install docpull[all]

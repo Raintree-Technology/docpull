@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-11-14
+
+### Added
+- `--doctor` command for diagnosing installation and dependency issues
+  - Checks all core dependencies (requests, beautifulsoup4, html2text, defusedxml, aiohttp, rich)
+  - Checks optional dependencies (PyYAML, Playwright) with installation suggestions
+  - Tests network connectivity
+  - Verifies output directory write permissions
+  - Works even when dependencies are missing
+- `requirements.txt` file for transparent dependency listing
+- Comprehensive `TROUBLESHOOTING.md` documentation with:
+  - Installation troubleshooting (missing dependencies, pipx issues)
+  - Runtime issue solutions (YAML config errors, JavaScript rendering)
+  - Diagnostic tools usage guide
+  - Common error messages reference table
+  - Quick reference commands
+
+### Changed
+- Improved error handling for missing dependencies
+  - Early dependency checking at CLI entry point
+  - Clear, actionable error messages with installation instructions
+  - Specific recommendations for pipx, pip, and development installations
+- Enhanced YAML configuration error handling
+  - Auto-fallback to JSON when PyYAML is not installed
+  - Clear error messages for YAML-related import errors
+  - Helpful suggestions for installing optional dependencies
+- Updated README.md with:
+  - `--doctor` command in Quick Start section
+  - Reference to TROUBLESHOOTING.md
+  - Better troubleshooting guidance
+
+### Fixed
+- Improved user experience when dependencies are missing (no more confusing tracebacks)
+- Better handling of optional dependency errors (PyYAML, Playwright)
+
 ## [1.0.0] - 2025-11-07
 
 ### Added
@@ -46,4 +81,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.1.0]: https://github.com/raintree-technology/docpull/releases/tag/v1.1.0
 [1.0.0]: https://github.com/raintree-technology/docpull/releases/tag/v1.0.0
