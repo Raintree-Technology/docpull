@@ -3,10 +3,7 @@
 
 import pytest
 
-from docpull.formatters import get_formatter
-from docpull.formatters.json import JSONFormatter
-from docpull.formatters.markdown import MarkdownFormatter
-from docpull.formatters.toon import TOONFormatter
+from docpull.formatters import JSONFormatter, MarkdownFormatter, ToonFormatter, get_formatter
 
 
 class TestFormatterFactory:
@@ -20,7 +17,7 @@ class TestFormatterFactory:
     def test_get_toon_formatter(self):
         """Test getting TOON formatter."""
         formatter = get_formatter("toon")
-        assert isinstance(formatter, TOONFormatter)
+        assert isinstance(formatter, ToonFormatter)
 
     def test_get_json_formatter(self):
         """Test getting JSON formatter."""
@@ -73,16 +70,16 @@ class TestMarkdownFormatter:
 
 
 class TestTOONFormatter:
-    """Test TOONFormatter."""
+    """Test ToonFormatter."""
 
     def test_toon_formatter_init(self):
         """Test TOON formatter initialization."""
-        formatter = TOONFormatter()
+        formatter = ToonFormatter()
         assert formatter is not None
 
     def test_format_compact(self):
         """Test TOON compact formatting."""
-        formatter = TOONFormatter()
+        formatter = ToonFormatter()
 
         content = """# Main Title
 
@@ -107,7 +104,7 @@ Content for section 2.
 
     def test_format_preserves_structure(self):
         """Test TOON preserves document structure."""
-        formatter = TOONFormatter()
+        formatter = ToonFormatter()
 
         content = """# Title
 ## Section
@@ -125,7 +122,7 @@ More content
 
     def test_get_extension(self):
         """Test getting file extension."""
-        formatter = TOONFormatter()
+        formatter = ToonFormatter()
         assert formatter.get_extension() == ".toon"
 
 
@@ -245,7 +242,7 @@ Detailed API documentation.
 """
 
         markdown_formatter = MarkdownFormatter()
-        toon_formatter = TOONFormatter()
+        toon_formatter = ToonFormatter()
 
         markdown_result = markdown_formatter.format(content, {})
         toon_result = toon_formatter.format(content, {})
@@ -259,7 +256,7 @@ Detailed API documentation.
         metadata = {"url": "https://example.com"}
 
         markdown_formatter = MarkdownFormatter()
-        toon_formatter = TOONFormatter()
+        toon_formatter = ToonFormatter()
         json_formatter = JSONFormatter()
 
         md_result = markdown_formatter.format(content, metadata)
