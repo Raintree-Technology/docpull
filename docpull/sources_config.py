@@ -60,8 +60,14 @@ class SourceConfig:
 
         Returns:
             Attribute value
+
+        Raises:
+            KeyError: If key not found
         """
-        return getattr(self, key)
+        try:
+            return getattr(self, key)
+        except AttributeError as e:
+            raise KeyError(key) from e
 
     @property
     def output_dir(self) -> Optional[str]:
@@ -199,7 +205,8 @@ class SourcesConfiguration:
         """Apply global settings to all sources that don't override them."""
         for source_config in self.sources.values():
             for key, value in self.global_settings.items():
-                if hasattr(source_config, key):
+                # Only apply to actual dataclass fields (skip properties like output_dir)
+                if key in source_config.__dataclass_fields__:
                     current_value = getattr(source_config, key)
 
                     # Only apply if source doesn't override
