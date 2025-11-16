@@ -72,6 +72,34 @@ class SourceConfig:
         except AttributeError as e:
             raise KeyError(key) from e
 
+    def __contains__(self, key: str) -> bool:
+        """Check if attribute exists and has a non-default value (for 'in' operator).
+
+        Args:
+            key: Attribute name
+
+        Returns:
+            True if attribute exists and has been set to a non-default value
+        """
+        if not isinstance(key, str):
+            return False
+
+        # Special handling for output_dir property: check if output field is set
+        if key == "output_dir":
+            return self.output is not None
+
+        try:
+            value = getattr(self, key)
+            # Check if it's a dataclass field with a default value
+            if key in self.__dataclass_fields__:
+                field_info = self.__dataclass_fields__[key]
+                # Return True if value is different from default
+                return value != field_info.default
+            # For non-field attributes, return True if they exist
+            return True
+        except AttributeError:
+            return False
+
     @property
     def output_dir(self) -> Optional[str]:
         """Alias for output field for backward compatibility.
