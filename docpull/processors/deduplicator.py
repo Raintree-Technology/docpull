@@ -39,14 +39,23 @@ class Deduplicator(BaseProcessor):
         super().__init__(config)
         self.enabled: bool = self.config.get("enabled", True)
         self.keep_variant: Optional[str] = self.config.get("keep_variant")
-        self.keep_strategy: str = self.config.get(
-            "keep_strategy", "pattern" if self.keep_variant else "first"
-        )
+
+        # Determine strategy: if keep_variant is a known strategy, use it
+        # Otherwise, treat it as a pattern to match
+        known_strategies = {"shortest", "longest", "first", "last"}
+        if self.keep_variant and self.keep_variant in known_strategies:
+            default_strategy = self.keep_variant
+        elif self.keep_variant:
+            default_strategy = "pattern"
+        else:
+            default_strategy = "first"
+
+        self.keep_strategy: str = self.config.get("keep_strategy", default_strategy)
         self.remove_patterns: list[str] = self.config.get("remove_patterns", [])
         self.hash_algorithm: str = self.config.get("hash_algorithm", "sha256")
 
-    def compute_hash(self, file_path: Path) -> str:
-        """Compute hash of file content.
+    def _compute_hash(self, file_path: Path) -> str:
+        """Compute hash of file content (private method for testing).
 
         Args:
             file_path: Path to file
@@ -66,6 +75,17 @@ class Deduplicator(BaseProcessor):
             self.logger.warning(f"Failed to hash {file_path}: {e}")
             # Return path-based hash as fallback
             return hashlib.sha256(str(file_path).encode()).hexdigest()
+
+    def compute_hash(self, file_path: Path) -> str:
+        """Compute hash of file content.
+
+        Args:
+            file_path: Path to file
+
+        Returns:
+            Hex digest of file hash
+        """
+        return self._compute_hash(file_path)
 
     def matches_pattern(self, file_path: Path, pattern: str) -> bool:
         """Check if file path matches a pattern.

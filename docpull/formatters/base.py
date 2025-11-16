@@ -48,6 +48,26 @@ class BaseFormatter(ABC):
         """
         pass
 
+    def format(self, content: str, metadata: Optional[dict[str, Union[str, int, None]]] = None) -> str:  # noqa: A003
+        """Alias for format_content() for backward compatibility.
+
+        Args:
+            content: Content to format
+            metadata: Optional metadata
+
+        Returns:
+            Formatted content
+        """
+        return self.format_content(content, metadata)
+
+    def get_extension(self) -> str:
+        """Alias for get_file_extension() for backward compatibility.
+
+        Returns:
+            File extension including dot
+        """
+        return self.get_file_extension()
+
     def save_formatted(
         self, content: str, file_path: Path, metadata: Optional[dict[str, Union[str, int, None]]] = None
     ) -> Path:

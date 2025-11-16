@@ -62,12 +62,12 @@ class SizeLimiter(BaseProcessor):
         if isinstance(size_spec, str):
             size_spec = size_spec.lower().strip()
 
-            # Parse unit
+            # Parse unit (check longer units first to avoid matching "b" in "kb")
             multipliers = {
-                "b": 1,
-                "kb": 1024,
-                "mb": 1024 * 1024,
                 "gb": 1024 * 1024 * 1024,
+                "mb": 1024 * 1024,
+                "kb": 1024,
+                "b": 1,
             }
 
             for unit, multiplier in multipliers.items():

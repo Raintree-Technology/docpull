@@ -57,7 +57,22 @@ class LanguageFilter(BaseProcessor):
             if overlap:
                 raise ValueError(f"Language codes appear in both include and exclude: {overlap}")
 
-    def detect_language(self, file_path: Path, metadata: dict[str, Union[int, str, float]]) -> Optional[str]:
+    def _detect_language(self, url_or_path: str) -> Optional[str]:
+        """Detect language code from a URL or path string.
+
+        Args:
+            url_or_path: URL or file path string
+
+        Returns:
+            Language code (e.g., 'en', 'de') or None if not detected
+        """
+        for pattern in self.patterns:
+            match = pattern.search(url_or_path)
+            if match:
+                return match.group("lang").lower()
+        return None
+
+    def detect_language(self, file_path: Path, metadata: dict[str, Union[str, int, None]]) -> Optional[str]:
         """Detect language code from file path and metadata.
 
         Args:
@@ -67,24 +82,20 @@ class LanguageFilter(BaseProcessor):
         Returns:
             Language code (e.g., 'en', 'de') or None if not detected
         """
-        # Check file path
-        path_str = str(file_path)
-        for pattern in self.patterns:
-            match = pattern.search(path_str)
-            if match:
-                return match.group("lang").lower()
-
-        # Check URL in metadata
+        # Check URL in metadata first (more reliable than file path)
         if "url" in metadata:
-            url = metadata["url"]
-            for pattern in self.patterns:
-                match = pattern.search(url)
-                if match:
-                    return match.group("lang").lower()
+            lang = self._detect_language(str(metadata["url"]))
+            if lang:
+                return lang
+
+        # Fallback to file path
+        lang = self._detect_language(str(file_path))
+        if lang:
+            return lang
 
         return None
 
-    def should_keep_file(self, file_path: Path, metadata: dict[str, Union[int, str, float]]) -> bool:
+    def should_keep_file(self, file_path: Path, metadata: dict[str, Union[str, int, None]]) -> bool:
         """Determine if file should be kept based on language.
 
         Args:

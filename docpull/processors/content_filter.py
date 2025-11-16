@@ -57,6 +57,49 @@ class ContentFilter(BaseProcessor):
             compiled = re.compile(pattern, flags | re.DOTALL)
             self.compiled_patterns.append((compiled, action, max_length))
 
+    def _remove_section(self, content: str, section_name: str) -> str:
+        """Remove a specific section from markdown content (private helper for testing).
+
+        Args:
+            content: Markdown content
+            section_name: Name of section to remove
+
+        Returns:
+            Content with section removed
+        """
+        lines = content.split("\n")
+        filtered_lines: list[str] = []
+        in_excluded_section = False
+        current_section_level = 0
+
+        for line in lines:
+            # Check if line is a header
+            header_match = re.match(r"^(#{1,6})\s+(.+)$", line)
+
+            if header_match:
+                level = len(header_match.group(1))
+                title = header_match.group(2).strip()
+
+                # Check if this is the section to exclude
+                if self.case_sensitive:
+                    is_excluded = section_name == title
+                else:
+                    is_excluded = section_name.lower() == title.lower()
+
+                if is_excluded:
+                    in_excluded_section = True
+                    current_section_level = level
+                    continue
+                elif in_excluded_section and level <= current_section_level:
+                    # End of excluded section
+                    in_excluded_section = False
+
+            # Add line if not in excluded section
+            if not in_excluded_section:
+                filtered_lines.append(line)
+
+        return "\n".join(filtered_lines)
+
     def remove_sections(self, content: str) -> tuple[str, int]:
         """Remove excluded sections from markdown content.
 

@@ -16,7 +16,9 @@ class SourceConfig:
 
     # Required
     url: str
-    output: str
+
+    # Output (optional, defaults to source name)
+    output: Optional[str] = None
 
     # Fetching options
     max_pages: Optional[int] = None
@@ -48,6 +50,17 @@ class SourceConfig:
     update_only_changed: bool = False
     hooks: Optional[str] = None
 
+    def __getitem__(self, key: str) -> Any:
+        """Allow dict-style access for backward compatibility.
+
+        Args:
+            key: Attribute name
+
+        Returns:
+            Attribute value
+        """
+        return getattr(self, key)
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
 
@@ -73,6 +86,40 @@ class SourceConfig:
         return cls(**filtered_data)
 
 
+class GlobalConfig:
+    """Wrapper for global configuration settings with attribute access."""
+
+    def __init__(self, settings: dict[str, Any]):
+        """Initialize with settings dict.
+
+        Args:
+            settings: Global settings dictionary
+        """
+        self._settings = settings
+
+    def __getattr__(self, name: str) -> Any:
+        """Get setting by attribute name.
+
+        Args:
+            name: Setting name
+
+        Returns:
+            Setting value
+
+        Raises:
+            AttributeError: If setting not found
+        """
+        if name.startswith("_"):
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        if name in self._settings:
+            value = self._settings[name]
+            # Convert string paths to Path objects
+            if name == "output_dir" and isinstance(value, str):
+                return Path(value)
+            return value
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+
 @dataclass
 class SourcesConfiguration:
     """Configuration for multiple documentation sources."""
@@ -87,6 +134,15 @@ class SourcesConfiguration:
     git_message: str = "Update docs - {date}"
     archive: bool = False
     archive_format: str = "tar.gz"
+
+    @property
+    def global_config(self) -> GlobalConfig:
+        """Get global config with attribute access.
+
+        Returns:
+            GlobalConfig wrapper
+        """
+        return GlobalConfig(self.global_settings)
 
     def add_source(self, name: str, config: SourceConfig) -> None:
         """Add a source configuration.
@@ -151,9 +207,27 @@ class SourcesConfiguration:
         for name, source_data in data.get("sources", {}).items():
             sources[name] = SourceConfig.from_dict(source_data)
 
+        # Build global settings from explicit global_settings or top-level settings
+        global_settings = data.get("global_settings", {}).copy()
+
+        # Known SourcesConfiguration fields that shouldn't go into global_settings
+        known_fields = {
+            "sources",
+            "global_settings",
+            "git_commit",
+            "git_message",
+            "archive",
+            "archive_format",
+        }
+
+        # Add any top-level settings that aren't known fields to global_settings
+        for key, value in data.items():
+            if key not in known_fields and key not in global_settings:
+                global_settings[key] = value
+
         return cls(
             sources=sources,
-            global_settings=data.get("global_settings", {}),
+            global_settings=global_settings,
             git_commit=data.get("git_commit", False),
             git_message=data.get("git_message", "Update docs - {date}"),
             archive=data.get("archive", False),
@@ -197,6 +271,27 @@ class SourcesConfiguration:
         logger.info(f"Loaded {len(config.sources)} sources from {file_path}")
 
         return config
+
+    @classmethod
+    def from_yaml(cls, file_path: Path) -> "SourcesConfiguration":
+        """Load configuration from YAML file (alias for load).
+
+        Args:
+            file_path: Config file path
+
+        Returns:
+            SourcesConfiguration instance
+        """
+        return cls.load(file_path)
+
+    @classmethod
+    def generate_template(cls, output_file: Path) -> None:
+        """Generate an example configuration template.
+
+        Args:
+            output_file: Path to save template
+        """
+        create_example_config(output_file)
 
 
 def create_example_config(output_file: Path):
