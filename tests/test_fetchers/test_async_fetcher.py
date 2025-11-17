@@ -129,19 +129,3 @@ class TestAsyncFetcherSecurity:
             # Verify timeout settings
             assert fetcher.MAX_DOWNLOAD_TIME == 300  # 5 minutes
             assert fetcher.MAX_JS_RENDER_TIME == 30  # 30 seconds
-
-
-@pytest.mark.integration
-class TestAsyncFetcherIntegration:
-    """Integration tests for async fetcher (requires network)."""
-
-    @pytest.mark.asyncio
-    async def test_fetch_real_url_without_js(self, base_fetcher, tmp_path):
-        """Test fetching a real URL (skip if no network)."""
-        pytest.skip("Integration test - requires network")
-        # Example integration test structure:
-        # async with AsyncFetcher(...) as fetcher:
-        #     result = await fetcher.fetch_url(
-        #         session, "https://example.com", tmp_path / "test.md"
-        #     )
-        #     assert result is True

@@ -31,7 +31,7 @@ class GitIntegration:
         """
         return (self.repo_dir / ".git").exists()
 
-    def _run_git(self, *args) -> tuple[bool, str]:
+    def _run_git(self, *args: str) -> tuple[bool, str]:
         """Run a git command.
 
         Args:

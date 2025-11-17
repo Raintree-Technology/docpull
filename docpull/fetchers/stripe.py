@@ -4,11 +4,12 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from ..utils.file_utils import clean_filename
 from .base import BaseFetcher
 
 
 class StripeFetcher(BaseFetcher):
+    """Fetcher for Stripe documentation."""
+
     def __init__(
         self,
         output_dir: Path,
@@ -41,19 +42,7 @@ class StripeFetcher(BaseFetcher):
         total = len(urls)
         for idx, url in enumerate(urls, 1):
             self.logger.info(f"[{idx}/{total}] Processing Stripe documentation")
-
-            path = url.replace(self.base_url, "").strip("/")
-            parts = path.split("/")
-
-            if len(parts) >= 2:
-                category_dir = self.output_dir / "stripe" / parts[0] / parts[1]
-            elif len(parts) == 1:
-                category_dir = self.output_dir / "stripe" / parts[0]
-            else:
-                category_dir = self.output_dir / "stripe" / "other"
-
-            filename = clean_filename(url, self.base_url)
-            filepath = category_dir / filename
+            filepath = self.create_output_path(url, self.base_url, "stripe")
             self.process_url(url, filepath)
 
         self.logger.info("Stripe documentation fetch complete")

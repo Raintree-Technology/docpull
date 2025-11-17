@@ -6,11 +6,12 @@ from typing import Optional
 
 from bs4 import BeautifulSoup
 
-from ..utils.file_utils import clean_filename
 from .base import BaseFetcher
 
 
 class PlaidFetcher(BaseFetcher):
+    """Fetcher for Plaid documentation."""
+
     def __init__(
         self,
         output_dir: Path,
@@ -70,22 +71,18 @@ class PlaidFetcher(BaseFetcher):
         for idx, url in enumerate(doc_urls_list, 1):
             self.logger.info(f"[{idx}/{total}] Processing Plaid documentation")
 
+            # Determine subdirectory and strip prefix based on URL type
             if "/api/" in url:
-                path = url.replace("https://plaid.com/api/", "").strip("/")
-                category_dir = self.output_dir / "plaid" / "api-reference"
+                filepath = self.create_output_path(
+                    url, "https://plaid.com/", "plaid/api-reference", strip_prefix="api"
+                )
             elif "/docs/" in url:
-                path = url.replace("https://plaid.com/docs/", "").strip("/")
-                category_dir = self.output_dir / "plaid" / "guides"
+                filepath = self.create_output_path(
+                    url, "https://plaid.com/", "plaid/guides", strip_prefix="docs"
+                )
             else:
-                path = ""
-                category_dir = self.output_dir / "plaid" / "other"
+                filepath = self.create_output_path(url, self.base_url, "plaid/other")
 
-            if "/" in path:
-                parts = path.split("/")
-                category_dir = category_dir / parts[0]
-
-            filename = clean_filename(url, self.base_url)
-            filepath = category_dir / filename
             self.process_url(url, filepath)
 
         self.logger.info("Plaid documentation fetch complete")

@@ -5,9 +5,28 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, TypedDict, Union
 
 logger = logging.getLogger(__name__)
+
+
+class ManifestEntry(TypedDict, total=False):
+    """Type for manifest cache entries."""
+
+    checksum: str
+    file_path: str
+    fetched_at: str
+    size: int
+    etag: str
+    last_modified: str
+
+
+class CacheState(TypedDict, total=False):
+    """Type for cache state."""
+
+    fetched_urls: list[str]
+    failed_urls: list[str]
+    last_run: Optional[str]
 
 
 class CacheManager:
@@ -25,10 +44,10 @@ class CacheManager:
         self.manifest_file = self.cache_dir / "manifest.json"
         self.state_file = self.cache_dir / "state.json"
 
-        self.manifest: dict[str, dict] = self._load_manifest()
-        self.state: dict[str, Union[str, int, None]] = self._load_state()
+        self.manifest: dict[str, ManifestEntry] = self._load_manifest()
+        self.state: CacheState = self._load_state()
 
-    def _load_manifest(self) -> dict[str, dict]:
+    def _load_manifest(self) -> dict[str, ManifestEntry]:
         """Load manifest from disk.
 
         Returns:
@@ -37,13 +56,14 @@ class CacheManager:
         if self.manifest_file.exists():
             try:
                 with open(self.manifest_file, encoding="utf-8") as f:
-                    return json.load(f)
+                    data: dict[str, ManifestEntry] = json.load(f)
+                    return data
             except Exception as e:
                 logger.warning(f"Could not load manifest: {e}")
 
         return {}
 
-    def _save_manifest(self):
+    def _save_manifest(self) -> None:
         """Save manifest to disk."""
         try:
             with open(self.manifest_file, "w", encoding="utf-8") as f:
@@ -51,7 +71,7 @@ class CacheManager:
         except Exception as e:
             logger.error(f"Could not save manifest: {e}")
 
-    def _load_state(self) -> dict[str, Union[str, int, None]]:
+    def _load_state(self) -> CacheState:
         """Load state from disk.
 
         Returns:
@@ -60,7 +80,8 @@ class CacheManager:
         if self.state_file.exists():
             try:
                 with open(self.state_file, encoding="utf-8") as f:
-                    return json.load(f)
+                    data: CacheState = json.load(f)
+                    return data
             except Exception as e:
                 logger.warning(f"Could not load state: {e}")
 
@@ -70,7 +91,7 @@ class CacheManager:
             "last_run": None,
         }
 
-    def _save_state(self):
+    def _save_state(self) -> None:
         """Save state to disk."""
         try:
             with open(self.state_file, "w", encoding="utf-8") as f:
@@ -114,16 +135,16 @@ class CacheManager:
 
         # Check ETag first (most reliable)
         if etag and "etag" in cached:
-            return etag != cached["etag"]
+            return bool(etag != cached["etag"])
 
         # Check Last-Modified
         if last_modified and "last_modified" in cached:
-            return last_modified != cached["last_modified"]
+            return bool(last_modified != cached["last_modified"])
 
         # Check content checksum
         if content and "checksum" in cached:
             current_checksum = self.compute_checksum(content)
-            return current_checksum != cached["checksum"]
+            return bool(current_checksum != cached["checksum"])
 
         # Can't determine, assume changed
         return True
@@ -135,7 +156,7 @@ class CacheManager:
         file_path: Path,
         etag: Optional[str] = None,
         last_modified: Optional[str] = None,
-    ):
+    ) -> None:
         """Update cache entry for a URL.
 
         Args:
@@ -159,24 +180,30 @@ class CacheManager:
 
         self._save_manifest()
 
-    def mark_fetched(self, url: str):
+    def mark_fetched(self, url: str) -> None:
         """Mark URL as successfully fetched.
 
         Args:
             url: URL that was fetched
         """
-        if url not in self.state["fetched_urls"]:
-            self.state["fetched_urls"].append(url)
+        if "fetched_urls" not in self.state:
+            self.state["fetched_urls"] = []
+        fetched_urls = self.state["fetched_urls"]
+        if url not in fetched_urls:
+            fetched_urls.append(url)
         self._save_state()
 
-    def mark_failed(self, url: str):
+    def mark_failed(self, url: str) -> None:
         """Mark URL as failed.
 
         Args:
             url: URL that failed
         """
-        if url not in self.state["failed_urls"]:
-            self.state["failed_urls"].append(url)
+        if "failed_urls" not in self.state:
+            self.state["failed_urls"] = []
+        failed_urls = self.state["failed_urls"]
+        if url not in failed_urls:
+            failed_urls.append(url)
         self._save_state()
 
     def get_fetched_urls(self) -> set[str]:
@@ -185,7 +212,8 @@ class CacheManager:
         Returns:
             Set of fetched URLs
         """
-        return set(self.state.get("fetched_urls", []))
+        fetched_urls = self.state.get("fetched_urls", [])
+        return set(fetched_urls)
 
     def get_failed_urls(self) -> set[str]:
         """Get set of URLs that failed to fetch.
@@ -193,14 +221,15 @@ class CacheManager:
         Returns:
             Set of failed URLs
         """
-        return set(self.state.get("failed_urls", []))
+        failed_urls = self.state.get("failed_urls", [])
+        return set(failed_urls)
 
-    def start_session(self):
+    def start_session(self) -> None:
         """Start a new fetch session."""
         self.state["last_run"] = datetime.now().isoformat()
         self._save_state()
 
-    def clear_state(self):
+    def clear_state(self) -> None:
         """Clear incremental state (for fresh start)."""
         self.state = {
             "fetched_urls": [],
@@ -216,9 +245,12 @@ class CacheManager:
         Returns:
             Dict with cache stats
         """
+        fetched_urls = self.state.get("fetched_urls", [])
+        failed_urls = self.state.get("failed_urls", [])
+
         return {
             "cached_urls": len(self.manifest),
-            "fetched_urls": len(self.state.get("fetched_urls", [])),
-            "failed_urls": len(self.state.get("failed_urls", [])),
+            "fetched_urls": len(fetched_urls),
+            "failed_urls": len(failed_urls),
             "last_run": self.state.get("last_run"),
         }

@@ -63,11 +63,11 @@ class Hook:
 class HookManager:
     """Manage and execute hooks/plugins."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize hook manager."""
         self.hooks: dict[HookType, list[Hook]] = {hook_type: [] for hook_type in HookType}
 
-    def register_hook(self, hook_type: HookType, hook: Hook):
+    def register_hook(self, hook_type: HookType, hook: Hook) -> None:
         """Register a hook.
 
         Args:
@@ -77,7 +77,9 @@ class HookManager:
         self.hooks[hook_type].append(hook)
         logger.info(f"Registered {hook_type.value} hook: {hook.name}")
 
-    def register_function(self, hook_type: HookType, func: Callable, name: Optional[str] = None):
+    def register_function(
+        self, hook_type: HookType, func: Callable[..., Any], name: Optional[str] = None
+    ) -> None:
         """Register a function as a hook.
 
         Args:
@@ -105,7 +107,7 @@ class HookManager:
 
         self.register_hook(hook_type, FunctionHook(name))
 
-    def load_from_file(self, file_path: Path):
+    def load_from_file(self, file_path: Path) -> None:
         """Load hooks from a Python file.
 
         Args:
@@ -196,11 +198,14 @@ class HookManager:
         )
 
 
-def hook(hook_type: HookType):
+def hook(hook_type: HookType) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator to mark a function as a hook.
 
     Args:
         hook_type: Type of hook
+
+    Returns:
+        Decorator function
 
     Example:
         @hook(HookType.PRE_FETCH)
@@ -210,8 +215,8 @@ def hook(hook_type: HookType):
             return True  # Continue
     """
 
-    def decorator(func):
-        func._hook_type = hook_type
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        func._hook_type = hook_type  # type: ignore[attr-defined]
         return func
 
     return decorator

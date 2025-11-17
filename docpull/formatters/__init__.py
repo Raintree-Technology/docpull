@@ -3,20 +3,20 @@
 from typing import Union
 
 from .base import BaseFormatter
-from .json import JsonFormatter
+from .json import JSONFormatter
 from .markdown import MarkdownFormatter
 from .sqlite import SqliteFormatter
 from .toon import ToonFormatter
 
-# Alias for backward compatibility with tests
-JSONFormatter = JsonFormatter
+# Alias for backward compatibility
+JsonFormatter = JSONFormatter
 
 __all__ = [
     "BaseFormatter",
     "MarkdownFormatter",
     "ToonFormatter",
-    "JsonFormatter",
     "JSONFormatter",
+    "JsonFormatter",
     "SqliteFormatter",
 ]
 
@@ -37,7 +37,7 @@ def get_formatter(format_name: str, **kwargs: Union[str, int, bool]) -> BaseForm
     formatters = {
         "markdown": MarkdownFormatter,
         "toon": ToonFormatter,
-        "json": JsonFormatter,
+        "json": JSONFormatter,
         "sqlite": SqliteFormatter,
     }
 

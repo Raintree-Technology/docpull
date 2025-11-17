@@ -5,9 +5,46 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, TypedDict
 
 logger = logging.getLogger(__name__)
+
+
+class HeaderDict(TypedDict):
+    """Type for header dictionaries."""
+
+    level: int
+    title: str
+
+
+class MetadataDict(TypedDict, total=False):
+    """Type for metadata dictionaries."""
+
+    path: str
+    size: int
+    word_count: int
+    title: Optional[str]
+    url: Optional[str]
+    last_updated: Optional[str]
+    category: Optional[str]
+    headers: list[HeaderDict]
+
+
+class CategoryStats(TypedDict):
+    """Type for category statistics."""
+
+    count: int
+    size: int
+
+
+class AggregateStats(TypedDict):
+    """Type for aggregate statistics."""
+
+    total_files: int
+    total_size: int
+    total_words: int
+    categories: dict[str, CategoryStats]
+    file_types: dict[str, int]
 
 
 class MetadataExtractor:
@@ -21,7 +58,7 @@ class MetadataExtractor:
         """
         self.output_dir = Path(output_dir)
 
-    def extract_from_file(self, file_path: Path) -> dict[str, Union[str, int, None]]:
+    def extract_from_file(self, file_path: Path) -> MetadataDict:
         """Extract metadata from a single file.
 
         Args:
@@ -30,7 +67,7 @@ class MetadataExtractor:
         Returns:
             Metadata dict with title, url, size, etc.
         """
-        metadata = {
+        metadata: MetadataDict = {
             "path": str(file_path),
             "size": 0,
             "word_count": 0,
@@ -76,16 +113,18 @@ class MetadataExtractor:
                         metadata["title"] = title_match.group(1).strip()
 
                 # Extract title from first H1 if not in frontmatter
-                if not metadata["title"]:
+                if not metadata.get("title"):
                     h1_match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
                     if h1_match:
                         metadata["title"] = h1_match.group(1).strip()
 
                 # Extract all headers
+                headers: list[HeaderDict] = []
                 for match in re.finditer(r"^(#{1,6})\s+(.+)$", content, re.MULTILINE):
                     level = len(match.group(1))
                     title = match.group(2).strip()
-                    metadata["headers"].append({"level": level, "title": title})
+                    headers.append({"level": level, "title": title})
+                metadata["headers"] = headers
 
                 # Word count
                 text = re.sub(r"```.*?```", "", content, flags=re.DOTALL)  # Remove code blocks
@@ -98,9 +137,7 @@ class MetadataExtractor:
 
         return metadata
 
-    def extract_from_directory(
-        self, include_patterns: Optional[list[str]] = None
-    ) -> list[dict[str, Union[str, int, None]]]:
+    def extract_from_directory(self, include_patterns: Optional[list[str]] = None) -> list[MetadataDict]:
         """Extract metadata from all files in output directory.
 
         Args:
@@ -110,7 +147,7 @@ class MetadataExtractor:
             List of metadata dicts
         """
         patterns = include_patterns or ["**/*.md", "**/*.markdown"]
-        all_metadata = []
+        all_metadata: list[MetadataDict] = []
 
         for pattern in patterns:
             for file_path in self.output_dir.glob(pattern):
@@ -120,7 +157,7 @@ class MetadataExtractor:
 
         return all_metadata
 
-    def aggregate_stats(self, all_metadata: list[dict[str, Union[str, int, None]]]) -> dict[str, any]:
+    def aggregate_stats(self, all_metadata: list[MetadataDict]) -> AggregateStats:
         """Aggregate statistics from metadata list.
 
         Args:
@@ -129,10 +166,10 @@ class MetadataExtractor:
         Returns:
             Aggregated stats dict
         """
-        stats = {
+        stats: AggregateStats = {
             "total_files": len(all_metadata),
-            "total_size": sum(m["size"] for m in all_metadata),
-            "total_words": sum(m["word_count"] for m in all_metadata),
+            "total_size": sum(m.get("size", 0) for m in all_metadata),
+            "total_words": sum(m.get("word_count", 0) for m in all_metadata),
             "categories": {},
             "file_types": {},
         }
@@ -146,10 +183,11 @@ class MetadataExtractor:
                     "size": 0,
                 }
             stats["categories"][category]["count"] += 1
-            stats["categories"][category]["size"] += metadata["size"]
+            stats["categories"][category]["size"] += metadata.get("size", 0)
 
             # File type stats
-            file_path = Path(metadata["path"])
+            path_str = metadata.get("path", "")
+            file_path = Path(path_str)
             ext = file_path.suffix or "(no extension)"
             stats["file_types"][ext] = stats["file_types"].get(ext, 0) + 1
 

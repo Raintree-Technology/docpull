@@ -176,3 +176,6 @@ screenshots/
 
 # Async test artifacts
 .async_cache/
+
+# Application cache
+.docpull-cache/

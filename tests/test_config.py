@@ -41,6 +41,3 @@ class TestFetcherConfig:
         assert config_dict["rate_limit"] == 0.5
         assert config_dict["sources"] == ["stripe"]
         assert config_dict["dry_run"] is False
-
-
-# Config file operations tests can be added in future versions

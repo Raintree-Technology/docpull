@@ -4,9 +4,29 @@ import logging
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, TypedDict, Union
 
 logger = logging.getLogger(__name__)
+
+
+class HeaderInfo(TypedDict):
+    """Type for header information."""
+
+    level: int
+    title: str
+    anchor: str
+
+
+# Tree node can be either None (leaf/file) or another tree dict (directory)
+TreeNode = Union[None, dict[str, "TreeNode"]]
+
+
+class IndexResult(TypedDict):
+    """Type for index creation result."""
+
+    main_index: Path
+    directory_indexes: list[Path]
+    files_indexed: int
 
 
 class DocIndexer:
@@ -39,7 +59,7 @@ class DocIndexer:
         self.include_stats = include_stats
         self.per_directory = per_directory
 
-    def extract_headers(self, file_path: Path) -> list[dict[str, str]]:
+    def extract_headers(self, file_path: Path) -> list[HeaderInfo]:
         """Extract headers from a markdown file.
 
         Args:
@@ -48,7 +68,7 @@ class DocIndexer:
         Returns:
             List of dicts with 'level', 'title', 'anchor'
         """
-        headers = []
+        headers: list[HeaderInfo] = []
 
         try:
             with open(file_path, encoding="utf-8") as f:
@@ -114,7 +134,7 @@ class DocIndexer:
         lines = ["## File Tree\n"]
 
         # Build tree structure
-        tree: dict[str, Union[str, int, None]] = {}
+        tree: dict[str, TreeNode] = {}
 
         for file_path in sorted(files):
             try:
@@ -123,19 +143,21 @@ class DocIndexer:
                 rel_path = file_path
 
             parts = rel_path.parts
-            current = tree
+            current: dict[str, TreeNode] = tree
 
             for part in parts[:-1]:
                 if part not in current:
                     current[part] = {}
-                current = current[part]
+                node = current[part]
+                if isinstance(node, dict):
+                    current = node
 
             # Add file
             current[parts[-1]] = None
 
         # Render tree
-        def render_tree(node: dict, prefix: str = "", is_last: bool = True):
-            result = []
+        def render_tree(node: dict[str, TreeNode], prefix: str = "", is_last: bool = True) -> list[str]:
+            result: list[str] = []
             items = sorted(node.items())
 
             for i, (name, children) in enumerate(items):
@@ -145,7 +167,7 @@ class DocIndexer:
                 if children is None:
                     # File
                     result.append(f"{prefix}{connector}{name}")
-                else:
+                elif isinstance(children, dict):
                     # Directory
                     result.append(f"{prefix}{connector}**{name}/**")
                     extension = "    " if is_last_item else "│   "
@@ -358,7 +380,7 @@ class DocIndexer:
 
         return created_indexes
 
-    def create_all_indexes(self, files: list[Path]) -> dict[str, Union[str, int, None]]:
+    def create_all_indexes(self, files: list[Path]) -> IndexResult:
         """Create all configured indexes.
 
         Args:
@@ -367,18 +389,19 @@ class DocIndexer:
         Returns:
             Dict with created indexes and stats
         """
-        result = {
-            "main_index": None,
-            "directory_indexes": [],
-            "files_indexed": len(files),
-        }
-
         # Create main index
-        result["main_index"] = self.create_index(files)
+        main_index_path = self.create_index(files)
 
         # Create directory indexes
+        dir_indexes: list[Path] = []
         if self.per_directory:
-            result["directory_indexes"] = self.create_directory_indexes(files)
+            dir_indexes = self.create_directory_indexes(files)
+
+        result: IndexResult = {
+            "main_index": main_index_path,
+            "directory_indexes": dir_indexes,
+            "files_indexed": len(files),
+        }
 
         logger.info(
             f"Created {1 + len(result['directory_indexes'])} index files " f"for {len(files)} documents"

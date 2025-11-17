@@ -4,22 +4,36 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from .base import BaseFetcher
+from .parallel_base import ParallelFetcher
 
 
-class NextJSFetcher(BaseFetcher):
+class NextJSFetcher(ParallelFetcher):
+    """Fetcher for Next.js documentation."""
+
     def __init__(
         self,
         output_dir: Path,
-        rate_limit: float = 0.5,
+        rate_limit: float = 0.2,
         skip_existing: bool = True,
         logger: Optional[logging.Logger] = None,
+        max_workers: int = 15,
     ) -> None:
-        super().__init__(output_dir, rate_limit, skip_existing=skip_existing, logger=logger)
+        """
+        Initialize Next.js fetcher.
+
+        Args:
+            output_dir: Directory to save documentation
+            rate_limit: Seconds between requests
+            skip_existing: Skip existing files
+            logger: Logger instance
+            max_workers: Number of concurrent workers
+        """
+        super().__init__(output_dir, rate_limit, skip_existing, logger, max_workers)
         self.sitemap_url = "https://nextjs.org/sitemap.xml"
         self.base_url = "https://nextjs.org/"
 
     def fetch(self) -> None:
+        """Fetch all Next.js documentation."""
         self.logger.info("Fetching Next.js documentation")
 
         urls = self.fetch_sitemap(self.sitemap_url)
@@ -34,17 +48,12 @@ class NextJSFetcher(BaseFetcher):
 
         self.logger.info(f"Found {len(doc_urls)} documentation URLs")
 
-        categories = self.categorize_urls(doc_urls, self.base_url)
-
-        self.logger.info(f"Found {len(categories)} categories:")
-        for cat, cat_urls in sorted(categories.items(), key=lambda x: len(x[1]), reverse=True):
-            self.logger.info(f"  {cat}: {len(cat_urls)} pages")
-
-        total = len(doc_urls)
-        for idx, url in enumerate(doc_urls, 1):
-            self.logger.info(f"[{idx}/{total}] Processing Next.js documentation")
+        url_output_pairs = []
+        for url in doc_urls:
             filepath = self.create_output_path(url, self.base_url, "next", strip_prefix="docs")
-            self.process_url(url, filepath)
+            url_output_pairs.append((url, filepath))
+
+        self.fetch_urls_parallel(url_output_pairs)
 
         self.logger.info("Next.js documentation fetch complete")
         self.print_stats()

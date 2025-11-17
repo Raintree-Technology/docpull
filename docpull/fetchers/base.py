@@ -63,7 +63,7 @@ class BaseFetcher(ABC):
         self.output_dir = Path(output_dir).resolve()
         self.rate_limit = rate_limit
         self.skip_existing = skip_existing
-        self.logger = logger or logging.getLogger("docpull")
+        self.logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.allowed_domains = allowed_domains
         self.h2t = html2text.HTML2Text()
         self.h2t.ignore_links = False
@@ -210,6 +210,7 @@ class BaseFetcher(ABC):
 
         except Exception as e:
             self.logger.error(f"Error fetching sitemap {url}: {e}")
+            self.stats["errors"] += 1
             return []
 
     def filter_urls(

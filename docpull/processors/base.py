@@ -139,7 +139,8 @@ class ProcessorPipeline:
 
                 # Merge stats
                 for key, value in result.stats.items():
-                    context.stats[f"{processor.__class__.__name__}.{key}"] = value
+                    if isinstance(value, int):
+                        context.stats[f"{processor.__class__.__name__}.{key}"] = value
 
             except Exception as e:
                 self.logger.error(f"Processor {processor.__class__.__name__} failed: {e}", exc_info=True)

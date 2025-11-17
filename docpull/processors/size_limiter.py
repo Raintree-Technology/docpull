@@ -34,17 +34,24 @@ class SizeLimiter(BaseProcessor):
         """
         super().__init__(config)
 
-        self.max_file_size: Optional[int] = self._parse_size(self.config.get("max_file_size"))
-        self.max_total_size: Optional[int] = self._parse_size(self.config.get("max_total_size"))
-        self.action: str = self.config.get("action", "skip")
-        self.truncate_marker: str = self.config.get(
-            "truncate_marker", "\n\n[Content truncated due to size limit]"
+        max_file_size_val = self.config.get("max_file_size")
+        max_total_size_val = self.config.get("max_total_size")
+        action_val = self.config.get("action", "skip")
+        truncate_marker_val = self.config.get("truncate_marker", "\n\n[Content truncated due to size limit]")
+
+        self.max_file_size: Optional[int] = self._parse_size(max_file_size_val)
+        self.max_total_size: Optional[int] = self._parse_size(max_total_size_val)
+        self.action: str = action_val if isinstance(action_val, str) else "skip"
+        self.truncate_marker: str = (
+            truncate_marker_val
+            if isinstance(truncate_marker_val, str)
+            else "\n\n[Content truncated due to size limit]"
         )
 
         if self.action not in ("skip", "truncate", "warn"):
             raise ValueError(f"Invalid action: {self.action}. Must be 'skip', 'truncate', or 'warn'")
 
-    def _parse_size(self, size_spec: Optional[any]) -> Optional[int]:
+    def _parse_size(self, size_spec: Union[str, int, bool, list[str], None]) -> Optional[int]:
         """Parse size specification to bytes.
 
         Args:

@@ -94,7 +94,7 @@ class SourceConfig:
             if key in self.__dataclass_fields__:
                 field_info = self.__dataclass_fields__[key]
                 # Return True if value is different from default
-                return value != field_info.default
+                return bool(value != field_info.default)
             # For non-field attributes, return True if they exist
             return True
         except AttributeError:
@@ -374,7 +374,7 @@ class SourcesConfiguration:
         create_example_config(output_file)
 
 
-def create_example_config(output_file: Path):
+def create_example_config(output_file: Path) -> None:
     """Create an example sources configuration file.
 
     Args:

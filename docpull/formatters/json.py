@@ -7,7 +7,7 @@ from typing import Optional, Union
 from .base import BaseFormatter
 
 
-class JsonFormatter(BaseFormatter):
+class JSONFormatter(BaseFormatter):
     """JSON format for structured data export.
 
     Converts markdown to structured JSON with metadata,
