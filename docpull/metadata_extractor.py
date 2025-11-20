@@ -70,17 +70,17 @@ class RichMetadataExtractor:
             if og_data and isinstance(og_data, list) and len(og_data) > 0:
                 og = og_data[0].get("properties", [])
                 if og:
-                    metadata.update(self._extract_opengraph(og))
+                    metadata.update(self._extract_opengraph(og))  # type: ignore[typeddict-item]
 
             # Extract JSON-LD data
             jsonld_data = data.get("json-ld", [])
             if jsonld_data and isinstance(jsonld_data, list):
-                metadata.update(self._extract_jsonld(jsonld_data))
+                metadata.update(self._extract_jsonld(jsonld_data))  # type: ignore[typeddict-item]
 
             # Extract microdata
             microdata = data.get("microdata", [])
             if microdata and isinstance(microdata, list):
-                metadata.update(self._extract_microdata(microdata))
+                metadata.update(self._extract_microdata(microdata))  # type: ignore[typeddict-item]
 
         except ImportError:
             logger.warning("extruct not installed, rich metadata extraction disabled")

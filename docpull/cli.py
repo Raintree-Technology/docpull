@@ -39,16 +39,7 @@ except ImportError as e:
 
 from . import __version__
 from .config import FetcherConfig
-from .fetchers import (
-    BunFetcher,
-    D3DevDocsFetcher,
-    NextJSFetcher,
-    PlaidFetcher,
-    ReactFetcher,
-    StripeFetcher,
-    TailwindFetcher,
-    TurborepoFetcher,
-)
+from .fetchers import StripeFetcher
 from .fetchers.generic_async import GenericAsyncFetcher
 from .orchestrator import create_orchestrator
 from .utils.logging_config import setup_logging
@@ -522,14 +513,7 @@ def run_fetchers(config: FetcherConfig) -> int:
 
     # Map source names to fetcher classes
     fetcher_map = {
-        "bun": BunFetcher,
-        "d3": D3DevDocsFetcher,
-        "nextjs": NextJSFetcher,
-        "plaid": PlaidFetcher,
-        "react": ReactFetcher,
         "stripe": StripeFetcher,
-        "tailwind": TailwindFetcher,
-        "turborepo": TurborepoFetcher,
     }
 
     # Run fetchers

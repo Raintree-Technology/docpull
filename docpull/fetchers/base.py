@@ -406,8 +406,10 @@ class BaseFetcher(ABC):
                     if rich_meta.get("author"):
                         frontmatter_parts.append(f"author: {rich_meta['author']}")
                     if rich_meta.get("keywords"):
-                        keywords_str = ", ".join(rich_meta["keywords"])
-                        frontmatter_parts.append(f"keywords: [{keywords_str}]")
+                        keywords = rich_meta["keywords"]
+                        if keywords:
+                            keywords_str = ", ".join(keywords)
+                            frontmatter_parts.append(f"keywords: [{keywords_str}]")
                     if rich_meta.get("image"):
                         frontmatter_parts.append(f"image: {rich_meta['image']}")
                     if rich_meta.get("type"):
@@ -421,8 +423,10 @@ class BaseFetcher(ABC):
                     if rich_meta.get("section"):
                         frontmatter_parts.append(f"section: {rich_meta['section']}")
                     if rich_meta.get("tags"):
-                        tags_str = ", ".join(rich_meta["tags"])
-                        frontmatter_parts.append(f"tags: [{tags_str}]")
+                        tags = rich_meta["tags"]
+                        if tags:
+                            tags_str = ", ".join(tags)
+                            frontmatter_parts.append(f"tags: [{tags_str}]")
 
                 frontmatter_parts.append("---")
                 frontmatter_parts.append("")  # Empty line after frontmatter
