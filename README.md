@@ -3,7 +3,9 @@
 **Pull documentation from any website and converts it into clean, AI-ready Markdown.**
 Fast, type-safe, secure, and optimized for building knowledge bases or training datasets.
 
-**NEW in v1.2.0**: 15 major features including language filtering, deduplication, auto-indexing, multi-source configuration, and more. Real-world testing shows **58% size reduction** with automatic optimization.
+**NEW in v1.3.0**: Rich structured metadata extraction (Open Graph, JSON-LD) for enhanced AI/RAG integration.
+
+**v1.2.0**: 15 major features including language filtering, deduplication, auto-indexing, multi-source configuration, and more. Real-world testing shows **58% size reduction** with automatic optimization.
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI version](https://badge.fury.io/py/docpull.svg)](https://badge.fury.io/py/docpull)
@@ -26,9 +28,15 @@ Unlike tools like wget or httrack, docpull extracts only the main content, remov
 - Sitemap + link crawling
 - Rate limiting, timeouts, content-type checks
 - Saves docs in structured Markdown with YAML metadata
-- Optimized profiles for popular platforms (Stripe, Next.js, React, Plaid, Tailwind, etc.)
+- Built-in Stripe profile as reference implementation (custom profiles easily added)
 
-### NEW in v1.2.0: Advanced Optimization
+### NEW in v1.3.0: Rich Metadata Extraction
+- **Structured Metadata**: Extract Open Graph, JSON-LD, and microdata during fetch
+- **Enhanced Frontmatter**: Adds author, description, keywords, images, publish dates, and more
+- **AI/RAG Ready**: Richer context for embeddings and retrieval systems
+- **Opt-in Feature**: Enabled with `--rich-metadata` flag
+
+### v1.2.0: Advanced Optimization
 - **Language Filtering**: Auto-detect and filter by language (skip 352+ translation files)
 - **Deduplication**: Remove duplicates with SHA-256 hashing (save 10+ MB on duplicate content)
 - **Auto-Index Generation**: Create navigable INDEX.md with tree/TOC/categories/stats
@@ -59,6 +67,9 @@ docpull stripe           # use a built-in profile
 
 # NEW: Simple optimization (v1.2.0)
 docpull https://code.claude.com/docs --language en --create-index
+
+# NEW: Rich metadata extraction (v1.3.0)
+docpull https://docs.anthropic.com --rich-metadata --create-index
 
 # NEW: Advanced optimization (v1.2.0)
 docpull https://aptos.dev \
@@ -120,6 +131,7 @@ fetcher.fetch()
 - `--naming-strategy {full,short,flat,hierarchical}` – file naming strategy
 - `--create-index` – generate INDEX.md with navigation
 - `--extract-metadata` – extract metadata to metadata.json
+- `--rich-metadata` – extract rich structured metadata (Open Graph, JSON-LD) during fetch
 - `--update-only-changed` – only download changed files
 - `--incremental` – enable incremental mode with resume
 - `--git-commit` – auto-commit changes
@@ -153,6 +165,24 @@ fetched: 2025-11-13
 ...
 ```
 
+With `--rich-metadata`, the frontmatter includes Open Graph, JSON-LD, and other structured metadata:
+
+```markdown
+---
+url: https://stripe.com/docs/payments
+fetched: 2025-11-13
+title: Accept a payment
+description: Learn how to accept payments with the Payment Intents API
+author: Stripe
+keywords: [payments, api, stripe, checkout]
+image: https://stripe.com/img/docs-preview.png
+type: article
+site_name: Stripe Documentation
+---
+# Payment Intents
+...
+```
+
 Directory layout mirrors the target site's structure.
 
 ## Configuration File
@@ -163,8 +193,8 @@ Directory layout mirrors the target site's structure.
 output_dir: ./docs
 rate_limit: 0.5
 sources:
-  - stripe
-  - nextjs
+  - stripe  # Built-in profile
+  - https://docs.example.com  # Or any URL
 ```
 
 Run with:
@@ -181,6 +211,7 @@ sources:
     language: en
     max_file_size: 200kb
     create_index: true
+    rich_metadata: true  # Extract Open Graph, JSON-LD metadata
 
   claude-code:
     url: https://code.claude.com/docs
@@ -212,7 +243,7 @@ See `examples/` directory for more configuration examples.
 
 ## Custom Profiles
 
-Easily define profiles for frequently scraped sites.
+docpull includes a Stripe profile as reference. Create custom profiles for other sites:
 
 ```python
 from docpull.profiles.base import SiteProfile
@@ -221,8 +252,12 @@ MY_PROFILE = SiteProfile(
     name="mysite",
     domains={"docs.mysite.com"},
     include_patterns=["/docs/", "/api/"],
+    sitemap_url="https://docs.mysite.com/sitemap.xml",
+    rate_limit=0.5,
 )
 ```
+
+**Want to contribute profiles?** Submit a PR with your custom profile! Popular ones may be added to the core or a community profiles repository.
 
 ## Security
 
@@ -296,6 +331,34 @@ See `examples/` directory for comprehensive configuration examples.
 - **Before**: 1,914 files, 31 MB, no navigation
 - **After**: 1,250 files, 13 MB (58% reduction), full indexes generated
 - **One command** instead of 4+ separate commands with manual optimization
+
+## What's New in v1.3.0
+
+This release adds rich structured metadata extraction for better AI/RAG integration.
+
+**New Feature**:
+- **Rich Metadata Extraction**: Extract Open Graph, JSON-LD, microdata, and other structured metadata during fetch
+  - Adds author, description, keywords, images, publish dates, and more to frontmatter
+  - Enhances AI/RAG systems with richer context
+  - Enabled with `--rich-metadata` flag or `rich_metadata: true` in config
+  - Powered by the extruct library
+
+**Example enhanced frontmatter**:
+```yaml
+---
+url: https://docs.example.com/guide
+fetched: 2025-11-20
+title: Getting Started Guide
+description: Learn the basics of our platform
+author: John Doe
+keywords: [tutorial, guide, api]
+image: https://docs.example.com/og-image.png
+type: article
+published_time: 2024-01-15T10:00:00Z
+---
+```
+
+**Backward Compatible**: All existing workflows continue to work unchanged. Rich metadata is opt-in.
 
 ## What's New in v1.2.0
 

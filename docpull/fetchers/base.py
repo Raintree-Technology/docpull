@@ -59,10 +59,12 @@ class BaseFetcher(ABC):
         skip_existing: bool = True,
         logger: Optional[logging.Logger] = None,
         allowed_domains: Optional[set[str]] = None,
+        use_rich_metadata: bool = False,
     ) -> None:
         self.output_dir = Path(output_dir).resolve()
         self.rate_limit = rate_limit
         self.skip_existing = skip_existing
+        self.use_rich_metadata = use_rich_metadata
         self.logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.allowed_domains = allowed_domains
         self.h2t = html2text.HTML2Text()
@@ -98,6 +100,14 @@ class BaseFetcher(ABC):
         if user_agent is None:
             user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
         self.session.headers.update({"User-Agent": user_agent})
+
+        # Initialize rich metadata extractor if enabled
+        self.rich_metadata_extractor = None
+        if self.use_rich_metadata:
+            from ..metadata_extractor import RichMetadataExtractor
+
+            self.rich_metadata_extractor = RichMetadataExtractor()
+
         self.stats: FetcherStats = {
             "fetched": 0,
             "skipped": 0,
@@ -358,6 +368,14 @@ class BaseFetcher(ABC):
 
             soup = BeautifulSoup(content, "html.parser")
 
+            # Extract rich metadata if enabled
+            rich_meta = None
+            if self.use_rich_metadata and self.rich_metadata_extractor:
+                try:
+                    rich_meta = self.rich_metadata_extractor.extract(content.decode("utf-8"), url)
+                except Exception as e:
+                    self.logger.debug(f"Rich metadata extraction failed for {url}: {e}")
+
             for element in soup(["script", "style", "nav", "footer", "header"]):
                 element.decompose()
             main_content = (
@@ -369,12 +387,47 @@ class BaseFetcher(ABC):
 
             if main_content:
                 markdown = self.h2t.handle(str(main_content))
-                frontmatter = f"""---
-url: {url}
-fetched: {time.strftime('%Y-%m-%d')}
----
 
-"""
+                # Build frontmatter with optional rich metadata
+                frontmatter_parts = [
+                    "---",
+                    f"url: {url}",
+                    f"fetched: {time.strftime('%Y-%m-%d')}",
+                ]
+
+                if rich_meta:
+                    # Add rich metadata fields if available
+                    if rich_meta.get("title"):
+                        frontmatter_parts.append(f"title: {rich_meta['title']}")
+                    if rich_meta.get("description"):
+                        # Escape any colons in description
+                        desc = str(rich_meta["description"]).replace(":", "\\:")
+                        frontmatter_parts.append(f"description: {desc}")
+                    if rich_meta.get("author"):
+                        frontmatter_parts.append(f"author: {rich_meta['author']}")
+                    if rich_meta.get("keywords"):
+                        keywords_str = ", ".join(rich_meta["keywords"])
+                        frontmatter_parts.append(f"keywords: [{keywords_str}]")
+                    if rich_meta.get("image"):
+                        frontmatter_parts.append(f"image: {rich_meta['image']}")
+                    if rich_meta.get("type"):
+                        frontmatter_parts.append(f"type: {rich_meta['type']}")
+                    if rich_meta.get("site_name"):
+                        frontmatter_parts.append(f"site_name: {rich_meta['site_name']}")
+                    if rich_meta.get("published_time"):
+                        frontmatter_parts.append(f"published_time: {rich_meta['published_time']}")
+                    if rich_meta.get("modified_time"):
+                        frontmatter_parts.append(f"modified_time: {rich_meta['modified_time']}")
+                    if rich_meta.get("section"):
+                        frontmatter_parts.append(f"section: {rich_meta['section']}")
+                    if rich_meta.get("tags"):
+                        tags_str = ", ".join(rich_meta["tags"])
+                        frontmatter_parts.append(f"tags: [{tags_str}]")
+
+                frontmatter_parts.append("---")
+                frontmatter_parts.append("")  # Empty line after frontmatter
+
+                frontmatter = "\n".join(frontmatter_parts)
                 return frontmatter + markdown.strip()
             else:
                 return f"# Error\n\nCould not find main content for {url}"

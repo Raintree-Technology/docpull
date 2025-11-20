@@ -5,6 +5,81 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-11-20
+
+### Added
+
+**Rich Metadata Extraction**
+- Extract structured metadata (Open Graph, JSON-LD, microdata) during fetch
+- New `--rich-metadata` CLI flag to enable rich metadata extraction
+- Enhanced frontmatter with author, description, keywords, images, publish dates, tags, and more
+- Better context for AI/RAG systems with richer document metadata
+- Powered by `extruct` library
+- Opt-in feature, backward compatible with existing workflows
+
+### Changed
+
+**Simplified Profile System**
+- Removed 7 built-in profiles (Next.js, React, Plaid, Tailwind, Bun, D3, Turborepo)
+- Kept Stripe profile as reference implementation
+- Generic fetcher works excellently for all documentation sites
+- Users can create custom profiles or use URLs directly
+- Reduced maintenance burden and codebase complexity
+
+### Technical Details
+
+**New Dependencies:**
+- Added `extruct>=0.15.0` for structured metadata extraction
+
+**New Files:**
+- `docpull/metadata_extractor.py` - Rich metadata extraction module
+- `tests/test_metadata_extractor.py` - Comprehensive test suite for metadata extraction
+
+**Updated Files:**
+- `docpull/fetchers/base.py` - Integrated rich metadata extraction into fetch pipeline
+- `docpull/fetchers/generic_async.py` - Added `use_rich_metadata` parameter
+- `docpull/config.py` - Added `rich_metadata` configuration option
+- `docpull/sources_config.py` - Added `rich_metadata` field to SourceConfig
+- `docpull/cli.py` - Added `--rich-metadata` CLI flag
+- `docpull/profiles/__init__.py` - Simplified to single Stripe profile
+
+**Removed Files:**
+- Removed 7 profile files and 7 fetcher implementation files
+
+**Version Bump:**
+- Updated version from `1.2.1` to `1.3.0`
+
+### Example Usage
+
+```bash
+# Extract rich metadata during fetch
+docpull https://docs.anthropic.com --rich-metadata
+
+# Combine with other features
+docpull https://stripe.com/docs --rich-metadata --create-index --language en
+
+# Multi-source configuration
+docpull --sources-file config.yaml  # with rich_metadata: true per source
+```
+
+### Example Enhanced Frontmatter
+
+```yaml
+---
+url: https://docs.example.com/guide
+fetched: 2025-11-20
+title: Getting Started Guide
+description: Learn the basics of our platform
+author: John Doe
+keywords: [tutorial, guide, api]
+image: https://docs.example.com/og-image.png
+type: article
+site_name: Example Docs
+published_time: 2024-01-15T10:00:00Z
+modified_time: 2024-01-20T15:30:00Z
+---
+```
+
 ## [1.2.0] - 2025-11-16
 
 ### Added - 15 Major New Features

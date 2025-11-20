@@ -50,6 +50,7 @@ class SourceConfig:
     update_only_changed: bool = False
     incremental: bool = False
     extract_metadata: bool = False
+    rich_metadata: bool = False
     hooks: Optional[str] = None
 
     def __getitem__(self, key: str) -> Any:

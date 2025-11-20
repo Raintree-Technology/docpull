@@ -34,6 +34,7 @@ class FetcherConfig:
         naming_strategy: str = "full",
         create_index: bool = False,
         extract_metadata: bool = False,
+        rich_metadata: bool = False,
         update_only_changed: bool = False,
         incremental: bool = False,
         cache_dir: str = ".docpull-cache",
@@ -52,7 +53,7 @@ class FetcherConfig:
             skip_existing: Skip existing files
             log_level: Logging level
             log_file: Optional log file path
-            sources: List of sources to fetch (e.g., ['stripe', 'plaid'])
+            sources: List of sources to fetch (profile names or URLs, e.g., ['stripe', 'https://docs.example.com'])
             dry_run: Dry run mode (don't download files)
             language: Include only this language (e.g., 'en')
             exclude_languages: Exclude these languages
@@ -67,6 +68,7 @@ class FetcherConfig:
             naming_strategy: File naming strategy (full, short, flat, hierarchical)
             create_index: Create INDEX.md with navigation
             extract_metadata: Extract metadata to metadata.json
+            rich_metadata: Extract rich structured metadata (Open Graph, JSON-LD) during fetch
             update_only_changed: Only download changed files
             incremental: Enable incremental mode
             cache_dir: Cache directory for update detection
@@ -81,7 +83,7 @@ class FetcherConfig:
         self.skip_existing = skip_existing
         self.log_level = log_level
         self.log_file = log_file
-        self.sources = sources or ["plaid", "stripe"]
+        self.sources = sources or ["stripe"]
         self.dry_run = dry_run
 
         # v1.2.0 features
@@ -98,6 +100,7 @@ class FetcherConfig:
         self.naming_strategy = naming_strategy
         self.create_index = create_index
         self.extract_metadata = extract_metadata
+        self.rich_metadata = rich_metadata
         self.update_only_changed = update_only_changed
         self.incremental = incremental
         self.cache_dir = Path(cache_dir)
@@ -131,11 +134,13 @@ class FetcherConfig:
         if not isinstance(rate_limit, (int, float)) or rate_limit < 0 or rate_limit > 60:
             raise ValueError("rate_limit must be between 0 and 60")
 
-        # Validate sources
-        valid_sources = {"bun", "d3", "nextjs", "plaid", "react", "stripe", "tailwind", "turborepo"}
-        sources = config_dict.get("sources", ["plaid", "stripe"])
-        if not all(s in valid_sources for s in sources):
-            raise ValueError(f"Invalid sources. Must be from: {valid_sources}")
+        # Validate sources (built-in profiles or URLs)
+        valid_sources = {"stripe"}
+        sources = config_dict.get("sources", ["stripe"])
+        # Allow URLs or valid profile names
+        for source in sources:
+            if not (source in valid_sources or source.startswith("http://") or source.startswith("https://")):
+                raise ValueError(f"Invalid source: {source}. Must be 'stripe' or a URL")
 
         # Validate log_level
         log_level = config_dict.get("log_level", "INFO")

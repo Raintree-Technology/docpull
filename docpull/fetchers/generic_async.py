@@ -38,6 +38,7 @@ class GenericAsyncFetcher(BaseFetcher):
         max_concurrent: int = 10,
         use_js: bool = False,
         show_progress: bool = True,
+        use_rich_metadata: bool = False,
     ) -> None:
         """
         Initialize async generic fetcher.
@@ -54,8 +55,15 @@ class GenericAsyncFetcher(BaseFetcher):
             max_concurrent: Maximum concurrent requests
             use_js: Enable JavaScript rendering (requires playwright)
             show_progress: Show progress bars
+            use_rich_metadata: Extract rich structured metadata (Open Graph, JSON-LD)
         """
-        super().__init__(output_dir, rate_limit, skip_existing=skip_existing, logger=logger)
+        super().__init__(
+            output_dir,
+            rate_limit,
+            skip_existing=skip_existing,
+            logger=logger,
+            use_rich_metadata=use_rich_metadata,
+        )
 
         # Determine if input is a URL or profile name
         if url_or_profile.startswith(("http://", "https://")):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "docpull"
-version = "1.2.1"
+version = "1.3.0"
 dynamic = []
 description = "Pull documentation from the web and convert to clean markdown"
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -67,6 +67,7 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
     "html2text>=2020.1.16",
     "defusedxml>=0.7.1",
+    "extruct>=0.15.0",
     "aiohttp>=3.9.0",
     "rich>=13.0.0",
     "pyyaml>=6.0",
@@ -139,6 +140,10 @@ exclude = ["tests/"]
 
 [[tool.mypy.overrides]]
 module = "playwright.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "extruct.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

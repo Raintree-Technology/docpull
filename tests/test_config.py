@@ -15,7 +15,7 @@ class TestFetcherConfig:
         assert config.rate_limit == 0.5
         assert config.skip_existing is True
         assert config.log_level == "INFO"
-        assert config.sources == ["plaid", "stripe"]  # Default sources
+        assert config.sources == ["stripe"]  # Default source
 
     def test_config_with_custom_values(self):
         """Test config with custom values."""
@@ -24,13 +24,13 @@ class TestFetcherConfig:
             rate_limit=1.0,
             skip_existing=False,
             log_level="DEBUG",
-            sources=["plaid", "stripe"],
+            sources=["stripe", "https://docs.example.com"],
         )
         assert config.output_dir == Path("./custom-docs")
         assert config.rate_limit == 1.0
         assert config.skip_existing is False
         assert config.log_level == "DEBUG"
-        assert config.sources == ["plaid", "stripe"]
+        assert config.sources == ["stripe", "https://docs.example.com"]
 
     def test_config_to_dict(self):
         """Test config can be converted to dict."""

@@ -295,12 +295,17 @@ Examples:
     )
 
     # Index Generation
-    index_group = parser.add_argument_group("index generation")
+    index_group = parser.add_argument_group("index generation & metadata")
     index_group.add_argument(
         "--create-index", action="store_true", help="Create INDEX.md with file tree and navigation"
     )
     index_group.add_argument(
         "--extract-metadata", action="store_true", help="Extract metadata to metadata.json"
+    )
+    index_group.add_argument(
+        "--rich-metadata",
+        action="store_true",
+        help="Extract rich structured metadata (Open Graph, JSON-LD) during fetch",
     )
 
     # Update Detection
@@ -635,6 +640,7 @@ def run_generic_fetchers(args: argparse.Namespace) -> int:
                 max_concurrent=max_concurrent,
                 use_js=use_js,
                 show_progress=show_progress,
+                use_rich_metadata=args.rich_metadata,
             )
             fetcher.fetch()  # This calls asyncio.run() internally
 
@@ -741,6 +747,7 @@ def run_multi_source_fetch(args: argparse.Namespace) -> int:
                 max_concurrent=source_config.max_concurrent or 10,
                 use_js=source_config.javascript,
                 show_progress=True,
+                use_rich_metadata=source_config.rich_metadata or False,
             )
 
             # Fetch

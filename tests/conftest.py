@@ -40,5 +40,5 @@ def sample_config():
         "rate_limit": 0.5,
         "skip_existing": True,
         "log_level": "INFO",
-        "sources": ["plaid", "stripe"],
+        "sources": ["stripe"],
     }
