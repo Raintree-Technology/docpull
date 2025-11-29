@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from docpull.discovery import (
     CompositeFilter,
     DomainFilter,

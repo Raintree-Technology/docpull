@@ -41,7 +41,7 @@ class BrowserFetchStep:
         """
         if not PLAYWRIGHT_AVAILABLE:
             raise ImportError(
-                "Playwright is required for browser fetching. " "Install with: pip install docpull[js]"
+                "Playwright is required for browser fetching. Install with: pip install docpull[js]"
             )
 
         self._fetcher = browser_fetcher

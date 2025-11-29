@@ -64,7 +64,7 @@ class BrowserContextPool:
         """
         if not PLAYWRIGHT_AVAILABLE:
             raise ImportError(
-                "Playwright is required for JavaScript rendering. " "Install with: pip install docpull[js]"
+                "Playwright is required for JavaScript rendering. Install with: pip install docpull[js]"
             )
 
         self._max_contexts = max_contexts
@@ -280,8 +280,7 @@ class BrowserFetcher:
 
                 if response is None or response.status >= 400:
                     logger.warning(
-                        f"Browser fetch failed for {url}: "
-                        f"status={response.status if response else 'None'}"
+                        f"Browser fetch failed for {url}: status={response.status if response else 'None'}"
                     )
                     return None
 

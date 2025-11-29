@@ -182,7 +182,7 @@ class Fetcher:
         if self.config.crawl.javascript:
             if not PLAYWRIGHT_AVAILABLE:
                 raise ImportError(
-                    "JavaScript rendering requires Playwright. " "Install with: pip install docpull[js]"
+                    "JavaScript rendering requires Playwright. Install with: pip install docpull[js]"
                 )
             self._browser_fetcher = BrowserFetcher(
                 max_contexts=self.config.performance.browser_contexts,
@@ -482,9 +482,7 @@ def fetch_blocking(
     # Detect if we're already in an async context
     try:
         asyncio.get_running_loop()
-        raise RuntimeError(
-            "fetch_blocking() called from async context. " "Use 'async with Fetcher()' instead."
-        )
+        raise RuntimeError("fetch_blocking() called from async context. Use 'async with Fetcher()' instead.")
     except RuntimeError as e:
         if "no running event loop" not in str(e).lower():
             raise

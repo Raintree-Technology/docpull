@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from docpull.cache import StreamingDeduplicator
 from docpull.pipeline.base import FetchPipeline, PageContext
 from docpull.pipeline.steps import (

@@ -175,9 +175,7 @@ class SitemapDiscoverer:
 
         page_urls, nested_sitemaps = self._parse_sitemap(content)
 
-        logger.debug(
-            f"Sitemap {sitemap_url}: {len(page_urls)} URLs, " f"{len(nested_sitemaps)} nested sitemaps"
-        )
+        logger.debug(f"Sitemap {sitemap_url}: {len(page_urls)} URLs, {len(nested_sitemaps)} nested sitemaps")
 
         # Yield page URLs
         count = 0

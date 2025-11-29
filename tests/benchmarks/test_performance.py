@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 import pytest
+
 from docpull.cache import StreamingDeduplicator
 from docpull.conversion.markdown import HtmlToMarkdown
 from docpull.models.config import DocpullConfig, ProfileName
@@ -76,7 +77,7 @@ class TestConversionPerformance:
         elapsed = time.perf_counter() - start
 
         ops_per_sec = iterations / elapsed
-        print(f"\nSmall HTML: {ops_per_sec:.0f} conversions/sec ({elapsed*1000/iterations:.2f}ms avg)")
+        print(f"\nSmall HTML: {ops_per_sec:.0f} conversions/sec ({elapsed * 1000 / iterations:.2f}ms avg)")
         assert ops_per_sec > 100, "Small HTML should convert at >100/sec"
 
     def test_medium_html_conversion(self):
@@ -90,7 +91,7 @@ class TestConversionPerformance:
         elapsed = time.perf_counter() - start
 
         ops_per_sec = iterations / elapsed
-        print(f"\nMedium HTML: {ops_per_sec:.0f} conversions/sec ({elapsed*1000/iterations:.2f}ms avg)")
+        print(f"\nMedium HTML: {ops_per_sec:.0f} conversions/sec ({elapsed * 1000 / iterations:.2f}ms avg)")
         assert ops_per_sec > 50, "Medium HTML should convert at >50/sec"
 
     def test_large_html_conversion(self):
@@ -104,9 +105,8 @@ class TestConversionPerformance:
         elapsed = time.perf_counter() - start
 
         ops_per_sec = iterations / elapsed
-        print(
-            f"\nLarge HTML (~100KB): {ops_per_sec:.1f} conversions/sec ({elapsed*1000/iterations:.1f}ms avg)"
-        )
+        avg_ms = elapsed * 1000 / iterations
+        print(f"\nLarge HTML (~100KB): {ops_per_sec:.1f} conversions/sec ({avg_ms:.1f}ms avg)")
         assert ops_per_sec > 5, "Large HTML should convert at >5/sec"
 
 
@@ -127,9 +127,8 @@ class TestDeduplicationPerformance:
         elapsed = time.perf_counter() - start
 
         ops_per_sec = len(contents) / elapsed
-        print(
-            f"\nStreamingDeduplicator: {ops_per_sec:.0f} checks/sec ({elapsed*1000/len(contents):.2f}ms avg)"
-        )
+        avg_ms = elapsed * 1000 / len(contents)
+        print(f"\nStreamingDeduplicator: {ops_per_sec:.0f} checks/sec ({avg_ms:.2f}ms avg)")
         assert ops_per_sec > 5000, "StreamingDeduplicator should handle >5000 checks/sec"
 
     @pytest.mark.asyncio
