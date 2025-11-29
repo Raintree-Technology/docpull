@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -18,7 +19,6 @@ class FetcherConfig:
         skip_existing: bool = True,
         log_level: str = "INFO",
         log_file: Optional[str] = None,
-        sources: Optional[list[str]] = None,
         dry_run: bool = False,
         # v1.2.0 features
         language: Optional[str] = None,
@@ -43,6 +43,11 @@ class FetcherConfig:
         archive: bool = False,
         archive_format: str = "tar.gz",
         post_process_hook: Optional[str] = None,
+        # v1.5.0 features
+        proxy: Optional[str] = None,
+        max_retries: int = 3,
+        retry_base_delay: float = 1.0,
+        user_agent: Optional[str] = None,
     ):
         """
         Initialize configuration.
@@ -53,7 +58,6 @@ class FetcherConfig:
             skip_existing: Skip existing files
             log_level: Logging level
             log_file: Optional log file path
-            sources: List of sources to fetch (profile names or URLs, e.g., ['stripe', 'https://docs.example.com'])
             dry_run: Dry run mode (don't download files)
             language: Include only this language (e.g., 'en')
             exclude_languages: Exclude these languages
@@ -77,13 +81,16 @@ class FetcherConfig:
             archive: Create compressed archive
             archive_format: Archive format (tar.gz, tar.bz2, tar.xz, zip)
             post_process_hook: Path to post-processing hook script
+            proxy: Proxy URL (e.g., 'http://proxy:8080' or 'socks5://proxy:1080')
+            max_retries: Maximum retry attempts for failed requests (default: 3)
+            retry_base_delay: Base delay for exponential backoff in seconds (default: 1.0)
+            user_agent: Custom User-Agent string
         """
         self.output_dir = Path(output_dir)
         self.rate_limit = rate_limit
         self.skip_existing = skip_existing
         self.log_level = log_level
         self.log_file = log_file
-        self.sources = sources or ["stripe"]
         self.dry_run = dry_run
 
         # v1.2.0 features
@@ -110,6 +117,15 @@ class FetcherConfig:
         self.archive_format = archive_format
         self.post_process_hook = post_process_hook
 
+        # v1.5.0 features
+        # robots.txt is always respected (mandatory for TOS compliance)
+        self.respect_robots = True
+        # Proxy: check environment variable if not explicitly set
+        self.proxy = proxy or os.environ.get("DOCPULL_PROXY") or os.environ.get("HTTPS_PROXY")
+        self.max_retries = max_retries
+        self.retry_base_delay = retry_base_delay
+        self.user_agent = user_agent
+
     @classmethod
     def from_dict(cls, config_dict: dict[str, Any]) -> "FetcherConfig":
         """
@@ -134,14 +150,6 @@ class FetcherConfig:
         if not isinstance(rate_limit, (int, float)) or rate_limit < 0 or rate_limit > 60:
             raise ValueError("rate_limit must be between 0 and 60")
 
-        # Validate sources (built-in profiles or URLs)
-        valid_sources = {"stripe"}
-        sources = config_dict.get("sources", ["stripe"])
-        # Allow URLs or valid profile names
-        for source in sources:
-            if not (source in valid_sources or source.startswith("http://") or source.startswith("https://")):
-                raise ValueError(f"Invalid source: {source}. Must be 'stripe' or a URL")
-
         # Validate log_level
         log_level = config_dict.get("log_level", "INFO")
         valid_log_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
@@ -154,7 +162,6 @@ class FetcherConfig:
             skip_existing=config_dict.get("skip_existing", True),
             log_level=log_level,
             log_file=config_dict.get("log_file"),
-            sources=sources,
             dry_run=config_dict.get("dry_run", False),
         )
 
@@ -239,7 +246,6 @@ class FetcherConfig:
             "skip_existing": self.skip_existing,
             "log_level": self.log_level,
             "log_file": self.log_file,
-            "sources": self.sources,
             "dry_run": self.dry_run,
         }
 
@@ -286,6 +292,16 @@ class FetcherConfig:
             config["archive_format"] = self.archive_format
         if self.post_process_hook:
             config["post_process_hook"] = self.post_process_hook
+
+        # v1.5.0 fields (respect_robots is always True, not configurable)
+        if self.proxy:
+            config["proxy"] = self.proxy
+        if self.max_retries != 3:
+            config["max_retries"] = self.max_retries
+        if self.retry_base_delay != 1.0:
+            config["retry_base_delay"] = self.retry_base_delay
+        if self.user_agent:
+            config["user_agent"] = self.user_agent
 
         return config
 

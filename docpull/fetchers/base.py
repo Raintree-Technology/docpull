@@ -1,4 +1,6 @@
+import hashlib
 import ipaddress
+import json
 import logging
 import re
 import time
@@ -6,13 +8,14 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, TypedDict
 from urllib.parse import urlparse
+from urllib.robotparser import RobotFileParser
 
 import html2text
 import requests
 from bs4 import BeautifulSoup
 from defusedxml import ElementTree
 
-from ..utils.file_utils import clean_filename, ensure_dir, validate_output_path
+from ..file_utils import clean_filename, ensure_dir, validate_output_path
 
 # Validate dependencies at module load
 try:
@@ -60,11 +63,15 @@ class BaseFetcher(ABC):
         logger: Optional[logging.Logger] = None,
         allowed_domains: Optional[set[str]] = None,
         use_rich_metadata: bool = False,
+        proxy: Optional[str] = None,
     ) -> None:
         self.output_dir = Path(output_dir).resolve()
         self.rate_limit = rate_limit
         self.skip_existing = skip_existing
         self.use_rich_metadata = use_rich_metadata
+        # robots.txt is always respected (mandatory for TOS compliance)
+        self.respect_robots = True
+        self.proxy = proxy
         self.logger = logger or logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.allowed_domains = allowed_domains
         self.h2t = html2text.HTML2Text()
@@ -74,6 +81,14 @@ class BaseFetcher(ABC):
         self.h2t.body_width = 0
         self.session = requests.Session()
         self.session.max_redirects = self.MAX_REDIRECTS
+
+        # Configure proxy if provided
+        if self.proxy:
+            self.session.proxies = {
+                "http": self.proxy,
+                "https": self.proxy,
+            }
+            self.logger.info(f"Using proxy: {self.proxy}")
 
         # Configure custom adapter to validate redirect URLs
         from typing import Any, Callable
@@ -98,8 +113,12 @@ class BaseFetcher(ABC):
         self.session.mount("http://", adapter)
 
         if user_agent is None:
-            user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (docpull/1.5)"
+        self.user_agent = user_agent
         self.session.headers.update({"User-Agent": user_agent})
+
+        # robots.txt cache: domain -> RobotFileParser
+        self._robots_cache: dict[str, Optional[RobotFileParser]] = {}
 
         # Initialize rich metadata extractor if enabled
         self.rich_metadata_extractor = None
@@ -113,6 +132,10 @@ class BaseFetcher(ABC):
             "skipped": 0,
             "errors": 0,
         }
+
+        # Content hash cache for change detection
+        self._hash_cache_path = self.output_dir / ".docpull-hashes.json"
+        self._content_hashes: dict[str, str] = self._load_hash_cache()
 
     def validate_url(self, url: str) -> bool:
         """
@@ -164,6 +187,151 @@ class BaseFetcher(ABC):
         except Exception:
             self.logger.warning("Invalid URL format")
             return False
+
+    def _load_hash_cache(self) -> dict[str, str]:
+        """Load content hashes from cache file."""
+        if self._hash_cache_path.exists():
+            try:
+                with open(self._hash_cache_path, encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        return data
+            except Exception as e:
+                self.logger.debug(f"Could not load hash cache: {e}")
+        return {}
+
+    def _save_hash_cache(self) -> None:
+        """Save content hashes to cache file."""
+        try:
+            ensure_dir(self._hash_cache_path.parent)
+            with open(self._hash_cache_path, "w", encoding="utf-8") as f:
+                json.dump(self._content_hashes, f, indent=2)
+            self.logger.debug(f"Saved hash cache with {len(self._content_hashes)} entries")
+        except Exception as e:
+            self.logger.warning(f"Could not save hash cache: {e}")
+
+    def compute_content_hash(self, content: str) -> str:
+        """
+        Compute a SHA-256 hash of content for change detection.
+
+        Args:
+            content: String content to hash
+
+        Returns:
+            Hex-encoded SHA-256 hash
+        """
+        return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+    def is_content_unchanged(self, url: str, content: str) -> bool:
+        """
+        Check if content has changed since last fetch.
+
+        Args:
+            url: URL that was fetched
+            content: Current content
+
+        Returns:
+            True if content is unchanged, False if changed or new
+        """
+        current_hash = self.compute_content_hash(content)
+        cached_hash = self._content_hashes.get(url)
+
+        if cached_hash == current_hash:
+            return True
+
+        # Update hash cache
+        self._content_hashes[url] = current_hash
+        return False
+
+    def _get_robots_parser(self, url: str) -> Optional[RobotFileParser]:
+        """
+        Get or create a RobotFileParser for the given URL's domain.
+
+        Args:
+            url: URL to get robots.txt parser for
+
+        Returns:
+            RobotFileParser instance or None if robots.txt couldn't be fetched
+        """
+        parsed = urlparse(url)
+        domain = f"{parsed.scheme}://{parsed.netloc}"
+
+        if domain in self._robots_cache:
+            return self._robots_cache[domain]
+
+        robots_url = f"{domain}/robots.txt"
+        try:
+            rp = RobotFileParser()
+            rp.set_url(robots_url)
+
+            # Fetch robots.txt with timeout
+            response = self.session.get(robots_url, timeout=10)
+            if response.status_code == 200:
+                rp.parse(response.text.splitlines())
+                self._robots_cache[domain] = rp
+                self.logger.debug(f"Loaded robots.txt from {robots_url}")
+
+                # Check for Crawl-delay directive
+                crawl_delay = rp.crawl_delay(self.user_agent)
+                if crawl_delay is not None:
+                    delay_value = float(crawl_delay)
+                    if delay_value > self.rate_limit:
+                        self.logger.info(f"Respecting Crawl-delay: {delay_value}s (was {self.rate_limit}s)")
+                        self.rate_limit = delay_value
+
+                return rp
+            else:
+                # No robots.txt or error - allow everything
+                self._robots_cache[domain] = None
+                self.logger.debug(f"No robots.txt at {robots_url} (status {response.status_code})")
+                return None
+
+        except Exception as e:
+            self.logger.debug(f"Could not fetch robots.txt from {robots_url}: {e}")
+            self._robots_cache[domain] = None
+            return None
+
+    def is_allowed_by_robots(self, url: str) -> bool:
+        """
+        Check if URL is allowed by robots.txt.
+
+        robots.txt compliance is mandatory for TOS compliance.
+
+        Args:
+            url: URL to check
+
+        Returns:
+            True if URL is allowed, False if disallowed by robots.txt
+        """
+        rp = self._get_robots_parser(url)
+        if rp is None:
+            # No robots.txt or couldn't fetch it - allow everything
+            return True
+
+        allowed = rp.can_fetch(self.user_agent, url)
+        if not allowed:
+            self.logger.debug(f"Blocked by robots.txt: {url}")
+        return allowed
+
+    def get_sitemaps_from_robots(self, url: str) -> list[str]:
+        """
+        Extract sitemap URLs from robots.txt.
+
+        Args:
+            url: Any URL from the domain to check
+
+        Returns:
+            List of sitemap URLs found in robots.txt
+        """
+        rp = self._get_robots_parser(url)
+        if rp is None:
+            return []
+
+        # RobotFileParser stores sitemaps
+        sitemaps = list(rp.site_maps() or [])
+        if sitemaps:
+            self.logger.info(f"Found {len(sitemaps)} sitemap(s) in robots.txt")
+        return sitemaps
 
     def fetch_sitemap(self, url: str) -> list[str]:
         self.logger.info(f"Fetching sitemap: {url}")
@@ -381,7 +549,14 @@ class BaseFetcher(ABC):
             main_content = (
                 soup.find("main")
                 or soup.find("article")
-                or soup.find(class_=re.compile(r"content|documentation|docs"))
+                or soup.find(id=re.compile(r"content|documentation|docs", re.IGNORECASE))
+                or soup.find(
+                    class_=re.compile(
+                        r"^(?:content|documentation|docs)$|"
+                        r"(?:^|-|_)(?:content|documentation|docs)(?:$|-|_)",
+                        re.IGNORECASE,
+                    )
+                )
                 or soup.find("body")
             )
 
@@ -470,6 +645,12 @@ class BaseFetcher(ABC):
             self.stats["errors"] += 1
             return False
 
+        # Check robots.txt
+        if not self.is_allowed_by_robots(url):
+            self.logger.info(f"Skipping (blocked by robots.txt): {url}")
+            self.stats["skipped"] += 1
+            return False
+
         try:
             validated_path = validate_output_path(output_path, self.output_dir)
         except ValueError as e:
@@ -497,7 +678,10 @@ class BaseFetcher(ABC):
         pass
 
     def print_stats(self) -> None:
-        """Print fetching statistics to log."""
+        """Print fetching statistics to log and save hash cache."""
+        # Save hash cache for change detection
+        self._save_hash_cache()
+
         self.logger.info("Fetching Statistics:")
         self.logger.info(f"  Fetched: {self.stats['fetched']}")
         self.logger.info(f"  Skipped: {self.stats['skipped']}")

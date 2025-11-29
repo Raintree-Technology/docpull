@@ -3,7 +3,9 @@
 **Pull documentation from any website and converts it into clean, AI-ready Markdown.**
 Fast, type-safe, secure, and optimized for building knowledge bases or training datasets.
 
-**NEW in v1.3.0**: Rich structured metadata extraction (Open Graph, JSON-LD) for enhanced AI/RAG integration.
+**NEW in v1.5.0**: Proxy support, retry with exponential backoff, custom User-Agent, and mandatory robots.txt compliance for TOS-friendly scraping.
+
+**v1.3.0**: Rich structured metadata extraction (Open Graph, JSON-LD) for enhanced AI/RAG integration.
 
 **v1.2.0**: 15 major features including language filtering, deduplication, auto-indexing, multi-source configuration, and more. Real-world testing shows **58% size reduction** with automatic optimization.
 
@@ -28,9 +30,16 @@ Unlike tools like wget or httrack, docpull extracts only the main content, remov
 - Sitemap + link crawling
 - Rate limiting, timeouts, content-type checks
 - Saves docs in structured Markdown with YAML metadata
-- Built-in Stripe profile as reference implementation (custom profiles easily added)
+- **Mandatory robots.txt compliance** for TOS-friendly scraping
 
-### NEW in v1.3.0: Rich Metadata Extraction
+### NEW in v1.5.0: Network & Reliability
+- **Proxy Support**: HTTP, HTTPS, and SOCKS5 proxies via `--proxy` or env vars
+- **Retry with Exponential Backoff**: Configurable retries for transient failures
+- **Custom User-Agent**: Set custom User-Agent strings for requests
+- **Crawl-delay Compliance**: Automatically respects robots.txt Crawl-delay directives
+- **Better Encoding Detection**: Intelligent charset detection for international docs
+
+### v1.3.0: Rich Metadata Extraction
 - **Structured Metadata**: Extract Open Graph, JSON-LD, and microdata during fetch
 - **Enhanced Frontmatter**: Adds author, description, keywords, images, publish dates, and more
 - **AI/RAG Ready**: Richer context for embeddings and retrieval systems
@@ -63,7 +72,7 @@ docpull --doctor         # verify installation
 
 # Basic usage
 docpull https://aptos.dev
-docpull stripe           # use a built-in profile
+docpull https://docs.anthropic.com
 
 # NEW: Simple optimization (v1.2.0)
 docpull https://code.claude.com/docs --language en --create-index
@@ -96,7 +105,7 @@ docpull https://site.com --js
 from docpull import GenericAsyncFetcher
 
 fetcher = GenericAsyncFetcher(
-    url_or_profile="https://aptos.dev",
+    url="https://aptos.dev",
     output_dir="./docs",
     max_pages=100,
     max_concurrent=20,
@@ -140,6 +149,12 @@ fetcher.fetch()
 - `--archive-format {tar.gz,tar.bz2,tar.xz,zip}` – archive format
 - `--sources-file PATH` – multi-source configuration file
 
+### NEW in v1.5.0: Network Options
+- `--proxy URL` – proxy URL (HTTP, HTTPS, SOCKS5)
+- `--user-agent STRING` – custom User-Agent string
+- `--max-retries N` – max retry attempts for failed requests (default: 3)
+- `--retry-base-delay SECONDS` – base delay for exponential backoff (default: 1.0)
+
 See `docpull --help` for complete list of options.
 
 ## Performance
@@ -158,10 +173,10 @@ Each downloaded page becomes a Markdown file:
 
 ```markdown
 ---
-url: https://stripe.com/docs/payments
-fetched: 2025-11-13
+url: https://aptos.dev/build/guides/first-transaction
+fetched: 2025-11-28
 ---
-# Payment Intents
+# Your First Transaction
 ...
 ```
 
@@ -169,17 +184,17 @@ With `--rich-metadata`, the frontmatter includes Open Graph, JSON-LD, and other 
 
 ```markdown
 ---
-url: https://stripe.com/docs/payments
-fetched: 2025-11-13
-title: Accept a payment
-description: Learn how to accept payments with the Payment Intents API
-author: Stripe
-keywords: [payments, api, stripe, checkout]
-image: https://stripe.com/img/docs-preview.png
+url: https://aptos.dev/build/guides/first-transaction
+fetched: 2025-11-28
+title: Your First Transaction
+description: Learn how to submit your first transaction on Aptos
+author: Aptos Foundation
+keywords: [aptos, blockchain, transaction, guide]
+image: https://aptos.dev/img/docs-preview.png
 type: article
-site_name: Stripe Documentation
+site_name: Aptos Documentation
 ---
-# Payment Intents
+# Your First Transaction
 ...
 ```
 
@@ -187,22 +202,7 @@ Directory layout mirrors the target site's structure.
 
 ## Configuration File
 
-### Simple Configuration (v1.0+)
-
-```yaml
-output_dir: ./docs
-rate_limit: 0.5
-sources:
-  - stripe  # Built-in profile
-  - https://docs.example.com  # Or any URL
-```
-
-Run with:
-```bash
-docpull --config config.yaml
-```
-
-### NEW: Multi-Source Configuration (v1.2.0)
+### Multi-Source Configuration
 
 ```yaml
 sources:
@@ -241,42 +241,27 @@ docpull --sources-file config.yaml
 
 See `examples/` directory for more configuration examples.
 
-## Custom Profiles
-
-docpull includes a Stripe profile as reference. Create custom profiles for other sites:
-
-```python
-from docpull.profiles.base import SiteProfile
-
-MY_PROFILE = SiteProfile(
-    name="mysite",
-    domains={"docs.mysite.com"},
-    include_patterns=["/docs/", "/api/"],
-    sitemap_url="https://docs.mysite.com/sitemap.xml",
-    rate_limit=0.5,
-)
-```
-
-**Want to contribute profiles?** Submit a PR with your custom profile! Popular ones may be added to the core or a community profiles repository.
-
 ## Security
 
-- HTTPS-only
-- Blocks private network IPs
+- HTTPS-only (HTTP rejected)
+- **Mandatory robots.txt compliance** (cannot be disabled)
+- Respects Crawl-delay directives
+- Blocks private/internal network IPs
 - 50MB page size limit
-- Timeout controls
-- Validates content-type
-- Playwright sandboxing
+- Timeout controls (30s connection, 5min download)
+- Validates content-type headers
+- Playwright sandboxing for JS rendering
+- Path traversal protection
 
 ## Troubleshooting
 
 - **Installation issues**: Run `docpull --doctor` to diagnose problems
-- **Missing dependencies**: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common fixes
-- **Site requires JS**: install Playwright + `--js`
-- **Slow or rate limited**: lower concurrency or raise `--rate-limit`
-- **Large sites**: set `--max-pages`
-
-For detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+- **Missing dependencies**: `pip install docpull[all]` for all optional dependencies
+- **Site requires JS**: `pip install docpull[js]` then `python -m playwright install chromium`
+- **Slow or rate limited**: Lower `--max-concurrent` or raise `--rate-limit`
+- **Large sites**: Set `--max-pages` to limit crawl size
+- **Proxy issues**: Use `--proxy URL` or set `DOCPULL_PROXY` / `HTTPS_PROXY` env var
+- **Transient failures**: Increase `--max-retries` (default: 3)
 
 ## v1.2.0 Feature Examples
 
@@ -332,6 +317,34 @@ See `examples/` directory for comprehensive configuration examples.
 - **After**: 1,250 files, 13 MB (58% reduction), full indexes generated
 - **One command** instead of 4+ separate commands with manual optimization
 
+## What's New in v1.5.0
+
+This release focuses on network reliability, proxy support, and TOS compliance.
+
+**New Features**:
+- **Proxy Support**: HTTP, HTTPS, and SOCKS5 proxies
+  - Use `--proxy URL` or set `DOCPULL_PROXY` / `HTTPS_PROXY` environment variables
+  - Install SOCKS support: `pip install docpull[proxy]`
+- **Retry with Exponential Backoff**: Automatic retries for transient failures
+  - `--max-retries N` (default: 3)
+  - `--retry-base-delay SECONDS` (default: 1.0)
+  - Handles 429, 500, 502, 503, 504 status codes
+- **Custom User-Agent**: `--user-agent STRING` for custom identification
+- **Better Encoding Detection**: Intelligent charset detection using charset-normalizer
+- **Crawl-delay Compliance**: Automatically respects robots.txt Crawl-delay directives
+
+**Security Enhancement**:
+- **Mandatory robots.txt Compliance**: robots.txt is now always respected (cannot be disabled)
+  - Ensures TOS-friendly scraping behavior
+  - Automatically adjusts rate limiting based on Crawl-delay
+
+**Codebase Simplification**:
+- Removed built-in profiles (Stripe, etc.) - use URLs directly
+- Consolidated utility modules
+- Moved CONTRIBUTING.md, SECURITY.md to `.github/` directory
+
+**Backward Compatible**: All existing workflows continue to work unchanged.
+
 ## What's New in v1.3.0
 
 This release adds rich structured metadata extraction for better AI/RAG integration.
@@ -362,7 +375,7 @@ published_time: 2024-01-15T10:00:00Z
 
 ## What's New in v1.2.0
 
-This release adds 15 major features across 4 phases. See [CHANGELOG.md](CHANGELOG.md) for complete release notes.
+This release adds 15 major features across 4 phases.
 
 **Highlights**:
 - Multi-source YAML configuration
@@ -381,7 +394,7 @@ This release adds 15 major features across 4 phases. See [CHANGELOG.md](CHANGELO
 - [PyPI](https://pypi.org/project/docpull/)
 - [GitHub](https://github.com/raintree-technology/docpull)
 - [Issues](https://github.com/raintree-technology/docpull/issues)
-- [Changelog](https://github.com/raintree-technology/docpull/blob/main/CHANGELOG.md)
+- [Releases](https://github.com/raintree-technology/docpull/releases)
 - [Examples](https://github.com/raintree-technology/docpull/tree/main/examples)
 
 ## License

@@ -39,17 +39,16 @@ except ImportError as e:
 
 from . import __version__
 from .config import FetcherConfig
-from .fetchers import StripeFetcher
 from .fetchers.generic_async import GenericAsyncFetcher
+from .logging_config import setup_logging
 from .orchestrator import create_orchestrator
-from .utils.logging_config import setup_logging
 
 
 def create_parser() -> argparse.ArgumentParser:
     """Create argument parser for CLI."""
     parser = argparse.ArgumentParser(
         prog="docpull",
-        description="Fetch and convert documentation from any URL or known sources to markdown",
+        description="Fetch and convert documentation from any URL to markdown",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -57,18 +56,11 @@ Examples:
   docpull https://aptos.dev
   docpull https://docs.anthropic.com
 
-  # Fetch using profile names (shortcuts)
-  docpull stripe
-  docpull nextjs plaid
-
-  # Mix URLs and profiles
-  docpull stripe https://newsite.com/docs
-
   # Control scraping depth and pages
   docpull https://example.com/docs --max-pages 100 --max-depth 3
 
-  # Legacy syntax still works
-  docpull --source stripe --source nextjs
+  # Filter paths
+  docpull https://example.com --include-paths "/api/*" --exclude-paths "/changelog/*"
 
   # Use a config file
   docpull --config config.yaml
@@ -78,11 +70,11 @@ Examples:
         """,
     )
 
-    # Positional arguments for URLs or profile names
+    # Positional arguments for URLs
     parser.add_argument(
         "targets",
         nargs="*",
-        help="URLs or profile names to fetch (e.g., 'https://docs.site.com', 'stripe', 'nextjs')",
+        help="URLs to fetch documentation from (e.g., 'https://docs.site.com')",
     )
 
     parser.add_argument(
@@ -98,16 +90,6 @@ Examples:
         type=Path,
         default=None,
         help="Directory to save documentation (default: ./docs)",
-    )
-
-    parser.add_argument(
-        "--source",
-        "-s",
-        nargs="+",
-        choices=["all", "bun", "d3", "nextjs", "plaid", "react", "stripe", "tailwind", "turborepo"],
-        default=None,
-        dest="sources",
-        help="Documentation source(s) to fetch. Use 'all' for everything. (default: all)",
     )
 
     parser.add_argument(
@@ -342,6 +324,41 @@ Examples:
         "--post-process-hook", type=Path, metavar="PATH", help="Python file with post-processing hooks"
     )
 
+    # ===== New Features (v1.5.0) =====
+
+    # Crawl Behavior
+    crawl_group = parser.add_argument_group("crawl behavior (v1.5.0)")
+    crawl_group.add_argument(
+        "--user-agent",
+        type=str,
+        metavar="STRING",
+        help="Custom User-Agent string for requests",
+    )
+
+    # Network & Proxy
+    network_group = parser.add_argument_group("network & proxy (v1.5.0)")
+    network_group.add_argument(
+        "--proxy",
+        type=str,
+        metavar="URL",
+        help="Proxy URL (e.g., 'http://proxy:8080', 'socks5://proxy:1080'). "
+        "Also reads DOCPULL_PROXY or HTTPS_PROXY env vars",
+    )
+    network_group.add_argument(
+        "--max-retries",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Maximum retry attempts for failed requests (default: 3)",
+    )
+    network_group.add_argument(
+        "--retry-base-delay",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help="Base delay for exponential backoff (default: 1.0)",
+    )
+
     return parser
 
 
@@ -411,13 +428,6 @@ def get_config(args: argparse.Namespace) -> FetcherConfig:
     if args.output_dir is not None:
         config.output_dir = args.output_dir
 
-    if args.sources is not None:
-        # Handle "all" keyword
-        if "all" in args.sources:
-            config.sources = ["bun", "d3", "nextjs", "plaid", "react", "stripe", "tailwind", "turborepo"]
-        else:
-            config.sources = args.sources
-
     if args.rate_limit is not None:
         config.rate_limit = args.rate_limit
 
@@ -480,87 +490,23 @@ def get_config(args: argparse.Namespace) -> FetcherConfig:
     if hasattr(args, "post_process_hook") and args.post_process_hook:
         config.post_process_hook = str(args.post_process_hook)
 
+    # v1.5.0 features - map CLI arguments to config
+    # Note: respect_robots is always True (mandatory) - no CLI option to disable
+    if hasattr(args, "user_agent") and args.user_agent:
+        config.user_agent = args.user_agent
+    if hasattr(args, "proxy") and args.proxy:
+        config.proxy = args.proxy
+    if hasattr(args, "max_retries") and args.max_retries is not None:
+        config.max_retries = args.max_retries
+    if hasattr(args, "retry_base_delay") and args.retry_base_delay is not None:
+        config.retry_base_delay = args.retry_base_delay
+
     return config
-
-
-def run_fetchers(config: FetcherConfig) -> int:
-    """
-    Run the fetchers based on configuration.
-
-    Args:
-        config: FetcherConfig instance
-
-    Returns:
-        Exit code (0 for success, 1 for error)
-    """
-    # Setup logging
-    logger = setup_logging(
-        level=config.log_level,
-        log_file=config.log_file,
-    )
-
-    logger.info("docpull - Documentation Fetcher")
-    logger.info(f"Mode: {'DRY RUN' if config.dry_run else 'FETCH'}")
-    logger.info(f"Output directory: {config.output_dir}")
-    logger.info(f"Rate limit: {config.rate_limit}s between requests")
-    logger.info(f"Skip existing: {config.skip_existing}")
-    logger.info(f"Sources: {', '.join(config.sources)}")
-    logger.info("")
-
-    if config.dry_run:
-        logger.info("DRY RUN MODE: No files will be downloaded")
-        logger.info("")
-
-    # Map source names to fetcher classes
-    fetcher_map = {
-        "stripe": StripeFetcher,
-    }
-
-    # Run fetchers
-    errors = 0
-    for source in config.sources:
-        if source not in fetcher_map:
-            logger.error(f"Unknown source: {source}")
-            errors += 1
-            continue
-
-        try:
-            fetcher_class = fetcher_map[source]
-            fetcher = fetcher_class(
-                output_dir=config.output_dir,
-                rate_limit=config.rate_limit,
-                skip_existing=config.skip_existing,
-                logger=logger,
-            )
-            fetcher.fetch()
-
-            # v1.2.0: Run post-fetch pipeline
-            try:
-                orchestrator = create_orchestrator(config)
-                files = list(config.output_dir.rglob("*.md"))
-                if files:
-                    processed_files = orchestrator.run_post_fetch_pipeline(files)
-                    logger.info(f"{source}: {len(processed_files)} files after processing")
-            except Exception as pipeline_error:
-                logger.error(f"Post-fetch pipeline error for {source}: {pipeline_error}", exc_info=True)
-                # Don't increment errors - fetching succeeded, post-processing failed
-
-        except Exception as e:
-            logger.error(f"Error fetching {source}: {e}", exc_info=True)
-            errors += 1
-
-    logger.info("")
-    if errors > 0:
-        logger.error(f"Completed with {errors} error(s)")
-        return 1
-    else:
-        logger.info("All documentation fetched successfully")
-        return 0
 
 
 def run_generic_fetchers(args: argparse.Namespace) -> int:
     """
-    Run generic fetchers for URLs or profile names.
+    Run generic fetchers for URLs.
 
     Args:
         args: Parsed command-line arguments
@@ -614,7 +560,7 @@ def run_generic_fetchers(args: argparse.Namespace) -> int:
             target_output = output_dir
 
             fetcher = GenericAsyncFetcher(
-                url_or_profile=target,
+                url=target,
                 output_dir=target_output,
                 rate_limit=rate_limit,
                 skip_existing=skip_existing,
@@ -625,6 +571,10 @@ def run_generic_fetchers(args: argparse.Namespace) -> int:
                 use_js=use_js,
                 show_progress=show_progress,
                 use_rich_metadata=args.rich_metadata,
+                proxy=config.proxy,
+                max_retries=config.max_retries,
+                retry_base_delay=config.retry_base_delay,
+                user_agent=config.user_agent,
             )
             fetcher.fetch()  # This calls asyncio.run() internally
 
@@ -721,7 +671,7 @@ def run_multi_source_fetch(args: argparse.Namespace) -> int:
 
             # Create generic fetcher
             fetcher = GenericAsyncFetcher(
-                url_or_profile=source_config.url,
+                url=source_config.url,
                 output_dir=Path(source_config.output or f"./docs/{source_name}"),
                 rate_limit=source_config.rate_limit or 0.5,
                 skip_existing=True,
@@ -732,6 +682,10 @@ def run_multi_source_fetch(args: argparse.Namespace) -> int:
                 use_js=source_config.javascript,
                 show_progress=True,
                 use_rich_metadata=source_config.rich_metadata or False,
+                proxy=getattr(source_config, "proxy", None),
+                max_retries=getattr(source_config, "max_retries", 3),
+                retry_base_delay=getattr(source_config, "retry_base_delay", 1.0),
+                user_agent=getattr(source_config, "user_agent", None),
             )
 
             # Fetch
@@ -811,24 +765,17 @@ def main(argv: Optional[list[str]] = None) -> int:
             print(f"Error generating config: {e}", file=sys.stderr)
             return 1
 
-    # NEW: Handle --sources-file (multi-source mode)
+    # Handle --sources-file (multi-source mode)
     if hasattr(args, "sources_file") and args.sources_file:
         return run_multi_source_fetch(args)
 
-    # Determine if using new URL-based interface or legacy source-based
-    use_generic = bool(args.targets)
+    # Require at least one URL target
+    if not args.targets:
+        parser.print_help()
+        print("\nError: Please provide at least one URL to fetch.", file=sys.stderr)
+        return 1
 
-    if use_generic:
-        # New URL-based interface
-        return run_generic_fetchers(args)
-    else:
-        # Legacy source-based interface
-        try:
-            config = get_config(args)
-        except Exception as e:
-            print(f"Error loading configuration: {e}", file=sys.stderr)
-            return 1
-        return run_fetchers(config)
+    return run_generic_fetchers(args)
 
 
 if __name__ == "__main__":

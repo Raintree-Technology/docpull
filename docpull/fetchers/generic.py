@@ -7,85 +7,55 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
-from ..profiles import SiteProfile, get_profile_by_name, get_profile_for_url
 from .base import BaseFetcher
 
 
 class GenericFetcher(BaseFetcher):
     """
     Generic fetcher that can scrape documentation from any URL.
-
-    Supports both profile-based (optimized) and generic scraping modes.
     """
 
     def __init__(
         self,
-        url_or_profile: str,
+        url: str,
         output_dir: Path,
-        profile: Optional[SiteProfile] = None,
         rate_limit: float = 0.5,
         skip_existing: bool = True,
         logger: Optional[logging.Logger] = None,
         max_pages: Optional[int] = None,
         max_depth: int = 5,
+        include_patterns: Optional[list[str]] = None,
+        exclude_patterns: Optional[list[str]] = None,
     ) -> None:
         """
         Initialize generic fetcher.
 
         Args:
-            url_or_profile: URL to scrape or profile name (e.g., 'stripe')
+            url: URL to scrape
             output_dir: Directory to save documentation
-            profile: Optional SiteProfile to use (overrides auto-detection)
             rate_limit: Seconds between requests
             skip_existing: Skip existing files
             logger: Logger instance
             max_pages: Maximum pages to fetch
             max_depth: Maximum crawl depth
+            include_patterns: URL patterns to include
+            exclude_patterns: URL patterns to exclude
         """
         super().__init__(output_dir, rate_limit, skip_existing=skip_existing, logger=logger)
 
-        # Determine if input is a URL or profile name
-        if url_or_profile.startswith(("http://", "https://")):
-            self.start_url = url_or_profile
-            # Try to auto-detect profile
-            if profile is None:
-                profile = get_profile_for_url(url_or_profile)
-                if profile:
-                    self.logger.info(f"Auto-detected profile: {profile.name}")
-        else:
-            # Treat as profile name
-            profile = get_profile_by_name(url_or_profile)
-            if profile is None:
-                raise ValueError(f"Unknown profile: {url_or_profile}")
-            start_url_candidate = profile.base_url or (profile.start_urls[0] if profile.start_urls else None)
-            if not start_url_candidate:
-                raise ValueError(f"Profile {url_or_profile} has no start URL")
-            self.start_url = start_url_candidate
-            self.logger.info(f"Using profile: {profile.name}")
+        if not url.startswith(("http://", "https://")):
+            raise ValueError(f"Invalid URL: {url}. Must start with http:// or https://")
 
-        self.profile = profile
+        self.start_url = url
         self.max_pages = max_pages
         self.max_depth = max_depth
 
-        # Set defaults from profile if available
-        if profile:
-            self.rate_limit = profile.rate_limit
-            self.sitemap_url = profile.sitemap_url
-            self.base_url = profile.base_url or self._extract_base_url(self.start_url)
-            self.include_patterns = profile.include_patterns
-            self.exclude_patterns = profile.exclude_patterns
-            self.output_subdir = profile.output_subdir or urlparse(self.start_url).netloc.replace(".", "_")
-            self.strip_prefix = profile.strip_prefix
-            self.follow_links = profile.follow_links
-        else:
-            # Generic mode - infer from URL
-            self.sitemap_url = self._guess_sitemap_url(self.start_url)
-            self.base_url = self._extract_base_url(self.start_url)
-            self.include_patterns = [self.base_url]
-            self.exclude_patterns = []
-            self.output_subdir = urlparse(self.start_url).netloc.replace(".", "_")
-            self.strip_prefix = None
-            self.follow_links = False
+        # Infer settings from URL
+        self.sitemap_url = self._guess_sitemap_url(self.start_url)
+        self.base_url = self._extract_base_url(self.start_url)
+        self.include_patterns = include_patterns or [self.base_url]
+        self.exclude_patterns = exclude_patterns or []
+        self.output_subdir = urlparse(self.start_url).netloc.replace(".", "_")
 
     def _extract_base_url(self, url: str) -> str:
         """Extract base URL from a full URL."""
@@ -183,7 +153,7 @@ class GenericFetcher(BaseFetcher):
         return discovered
 
     def fetch(self) -> None:
-        """Fetch documentation using profile or generic scraping."""
+        """Fetch documentation from the URL."""
         self.logger.info(f"Fetching documentation from {self.start_url}")
 
         urls: set[str] = set()
@@ -195,16 +165,9 @@ class GenericFetcher(BaseFetcher):
                 urls.update(sitemap_urls)
                 self.logger.info(f"Found {len(sitemap_urls)} URLs in sitemap")
 
-        # Add start URLs if using profile
-        if self.profile and self.profile.start_urls:
-            urls.update(self.profile.start_urls)
-
-        # Crawl links if needed
-        if self.follow_links or (not urls and not self.sitemap_url):
+        # Crawl links if no sitemap found
+        if not urls:
             start_urls = {self.start_url}
-            if self.profile and self.profile.start_urls:
-                start_urls.update(self.profile.start_urls)
-
             self.logger.info(f"Crawling links from {len(start_urls)} start URL(s)")
             crawled_urls = self._crawl_links(start_urls, self.max_depth)
             urls.update(crawled_urls)
@@ -239,15 +202,12 @@ class GenericFetcher(BaseFetcher):
         for idx, url in enumerate(urls_list, 1):
             self.logger.info(f"[{idx}/{total}] Processing: {url}")
 
-            if self.profile and self.base_url:
-                filepath = self.create_output_path(url, self.base_url, self.output_subdir, self.strip_prefix)
-            else:
-                # Generic path creation
-                parsed = urlparse(url)
-                path = parsed.path.strip("/")
-                if not path:
-                    path = "index"
-                filepath = self.output_dir / self.output_subdir / f"{path.replace('/', '_')}.md"
+            # Generic path creation
+            parsed = urlparse(url)
+            path = parsed.path.strip("/")
+            if not path:
+                path = "index"
+            filepath = self.output_dir / self.output_subdir / f"{path.replace('/', '_')}.md"
 
             self.process_url(url, filepath)
 

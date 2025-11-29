@@ -6,7 +6,7 @@ import pytest
 
 from docpull.fetchers.async_fetcher import AsyncFetcher
 from docpull.fetchers.base import BaseFetcher
-from docpull.utils.logging_config import setup_logging
+from docpull.logging_config import setup_logging
 
 
 @pytest.fixture

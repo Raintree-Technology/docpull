@@ -1,6 +1,7 @@
 """Async fetcher with JavaScript rendering support."""
 
 import asyncio
+import random
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -8,7 +9,15 @@ from typing import Any, Optional
 import aiohttp
 from bs4 import BeautifulSoup
 
-from ..utils.file_utils import ensure_dir, validate_output_path
+# Better encoding detection (charset-normalizer is an aiohttp dependency)
+try:
+    from charset_normalizer import from_bytes as detect_encoding
+
+    CHARSET_NORMALIZER_AVAILABLE = True
+except ImportError:
+    CHARSET_NORMALIZER_AVAILABLE = False
+
+from ..file_utils import ensure_dir, validate_output_path
 from .base import BaseFetcher
 
 # Optional Playwright support
@@ -34,6 +43,8 @@ class AsyncFetcher:
     - Timeout controls for both HTTP and browser
     - Content size limits
     - Playwright sandboxing (disabled JS in certain contexts)
+    - Retry with exponential backoff
+    - robots.txt compliance
     """
 
     MAX_CONTENT_SIZE = 50 * 1024 * 1024  # 50 MB
@@ -41,12 +52,22 @@ class AsyncFetcher:
     MAX_JS_RENDER_TIME = 30  # 30 seconds for JS rendering
     MAX_CONCURRENT = 10  # Max concurrent requests
 
+    # Retry settings
+    RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+    RETRYABLE_EXCEPTIONS = (
+        aiohttp.ClientError,
+        asyncio.TimeoutError,
+        ConnectionError,
+    )
+
     def __init__(
         self,
         base_fetcher: BaseFetcher,
         max_concurrent: int = 10,
         use_js: bool = False,
         headless: bool = True,
+        max_retries: int = 3,
+        retry_base_delay: float = 1.0,
     ) -> None:
         """
         Initialize async fetcher.
@@ -56,16 +77,23 @@ class AsyncFetcher:
             max_concurrent: Maximum concurrent requests
             use_js: Enable JavaScript rendering with Playwright
             headless: Run browser in headless mode
+            max_retries: Maximum retry attempts for failed requests
+            retry_base_delay: Base delay for exponential backoff (seconds)
         """
         self.base_fetcher = base_fetcher
         self.logger = base_fetcher.logger
         self.max_concurrent = max_concurrent
         self.use_js = use_js
         self.headless = headless
+        self.max_retries = max_retries
+        self.retry_base_delay = retry_base_delay
 
         # Async-safe rate limiting
         self.semaphore = asyncio.Semaphore(max_concurrent)
         self.rate_limit_delay = base_fetcher.rate_limit
+
+        # Proxy configuration from base fetcher
+        self.proxy = getattr(base_fetcher, "proxy", None)
 
         # Browser instance (if using JS)
         self.browser: Optional[Browser] = None  # type: ignore[no-any-unimported]
@@ -163,9 +191,72 @@ class AsyncFetcher:
             await page.close()
             await context.close()
 
+    def _calculate_retry_delay(self, attempt: int) -> float:
+        """
+        Calculate delay for exponential backoff with jitter.
+
+        Args:
+            attempt: Current attempt number (0-indexed)
+
+        Returns:
+            Delay in seconds
+        """
+        # Exponential backoff: base * (2 ^ attempt) + random jitter
+        delay: float = self.retry_base_delay * (2**attempt)
+        jitter: float = random.uniform(0, 1)
+        return delay + jitter
+
+    def _decode_content(self, content: bytes, content_type: str) -> str:
+        """
+        Decode content with intelligent encoding detection.
+
+        Args:
+            content: Raw bytes content
+            content_type: Content-Type header value
+
+        Returns:
+            Decoded string
+        """
+        # First, try to get encoding from Content-Type header
+        encoding = None
+        if content_type:
+            for part in content_type.split(";"):
+                part = part.strip()
+                if part.lower().startswith("charset="):
+                    encoding = part.split("=", 1)[1].strip().strip("\"'")
+                    break
+
+        # Try declared encoding first
+        if encoding:
+            try:
+                return content.decode(encoding)
+            except (UnicodeDecodeError, LookupError):
+                self.logger.debug(f"Failed to decode with declared encoding: {encoding}")
+
+        # Use charset-normalizer for better detection
+        if CHARSET_NORMALIZER_AVAILABLE:
+            try:
+                result = detect_encoding(content)
+                if result:
+                    best_match = result.best()
+                    if best_match:
+                        detected_encoding = best_match.encoding
+                        self.logger.debug(f"Detected encoding: {detected_encoding}")
+                        return str(best_match)
+            except Exception as e:
+                self.logger.debug(f"Encoding detection failed: {e}")
+
+        # Final fallback: UTF-8 with replacement
+        return content.decode("utf-8", errors="replace")
+
     async def fetch_without_js(self, session: aiohttp.ClientSession, url: str) -> str:
         """
         Fetch page content without JavaScript (faster).
+
+        Features:
+        - Retry with exponential backoff
+        - Better encoding detection
+        - Proxy support
 
         Args:
             session: aiohttp ClientSession
@@ -177,36 +268,78 @@ class AsyncFetcher:
         if not self.base_fetcher.validate_url(url):
             raise ValueError(f"Invalid URL: {url}")
 
-        try:
-            async with session.get(
-                url,
-                timeout=aiohttp.ClientTimeout(total=30),
-                headers=self.base_fetcher.session.headers,
-            ) as response:
-                response.raise_for_status()
+        # Check robots.txt
+        if not self.base_fetcher.is_allowed_by_robots(url):
+            raise ValueError(f"Blocked by robots.txt: {url}")
 
-                # Validate content type
-                content_type = response.headers.get("Content-Type", "")
-                if not self.base_fetcher.validate_content_type(content_type):
-                    raise ValueError(f"Invalid content type: {content_type}")
+        last_error: Optional[Exception] = None
 
-                # Check size limits
-                content_length = response.headers.get("Content-Length")
-                if content_length and int(content_length) > self.MAX_CONTENT_SIZE:
-                    raise ValueError(f"Content too large: {content_length} bytes")
+        for attempt in range(self.max_retries + 1):
+            try:
+                async with session.get(
+                    url,
+                    timeout=aiohttp.ClientTimeout(total=30),
+                    headers=dict(self.base_fetcher.session.headers),
+                    proxy=self.proxy,
+                ) as response:
+                    # Check for retryable status codes
+                    if response.status in self.RETRYABLE_STATUS_CODES:
+                        if attempt < self.max_retries:
+                            delay = self._calculate_retry_delay(attempt)
+                            self.logger.warning(
+                                f"Got {response.status} for {url}, retrying in {delay:.1f}s "
+                                f"(attempt {attempt + 1}/{self.max_retries + 1})"
+                            )
+                            await asyncio.sleep(delay)
+                            continue
+                        else:
+                            response.raise_for_status()
 
-                # Read with size limit
-                content = b""
-                async for chunk in response.content.iter_chunked(8192):
-                    content += chunk
-                    if len(content) > self.MAX_CONTENT_SIZE:
-                        raise ValueError("Content size limit exceeded")
+                    response.raise_for_status()
 
-                return content.decode("utf-8", errors="ignore")
+                    # Validate content type
+                    content_type = response.headers.get("Content-Type", "")
+                    if not self.base_fetcher.validate_content_type(content_type):
+                        raise ValueError(f"Invalid content type: {content_type}")
 
-        except Exception as e:
-            self.logger.error(f"HTTP fetch error for {url}: {e}")
-            raise
+                    # Check size limits
+                    content_length = response.headers.get("Content-Length")
+                    if content_length and int(content_length) > self.MAX_CONTENT_SIZE:
+                        raise ValueError(f"Content too large: {content_length} bytes")
+
+                    # Read with size limit
+                    content = b""
+                    async for chunk in response.content.iter_chunked(8192):
+                        content += chunk
+                        if len(content) > self.MAX_CONTENT_SIZE:
+                            raise ValueError("Content size limit exceeded")
+
+                    # Decode with intelligent encoding detection
+                    return self._decode_content(content, content_type)
+
+            except self.RETRYABLE_EXCEPTIONS as e:
+                last_error = e
+                if attempt < self.max_retries:
+                    delay = self._calculate_retry_delay(attempt)
+                    self.logger.warning(
+                        f"Error fetching {url}: {e}, retrying in {delay:.1f}s "
+                        f"(attempt {attempt + 1}/{self.max_retries + 1})"
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    attempts = self.max_retries + 1
+                    self.logger.error(f"HTTP fetch error for {url} after {attempts} attempts: {e}")
+                    raise
+
+            except Exception as e:
+                # Non-retryable error
+                self.logger.error(f"HTTP fetch error for {url}: {e}")
+                raise
+
+        # Should not reach here, but just in case
+        if last_error:
+            raise last_error
+        raise RuntimeError(f"Unexpected error fetching {url}")
 
     async def fetch_url(
         self,
@@ -229,6 +362,12 @@ class AsyncFetcher:
             if not self.base_fetcher.validate_url(url):
                 self.logger.warning(f"Skipping invalid URL: {url}")
                 self.base_fetcher.stats["errors"] += 1
+                return False
+
+            # Check robots.txt
+            if not self.base_fetcher.is_allowed_by_robots(url):
+                self.logger.info(f"Skipping (blocked by robots.txt): {url}")
+                self.base_fetcher.stats["skipped"] += 1
                 return False
 
             try:
@@ -266,7 +405,14 @@ class AsyncFetcher:
                 main_content = (
                     soup.find("main")
                     or soup.find("article")
-                    or soup.find(class_=re.compile(r"content|documentation|docs"))
+                    or soup.find(id=re.compile(r"content|documentation|docs", re.IGNORECASE))
+                    or soup.find(
+                        class_=re.compile(
+                            r"^(?:content|documentation|docs)$|"
+                            r"(?:^|-|_)(?:content|documentation|docs)(?:$|-|_)",
+                            re.IGNORECASE,
+                        )
+                    )
                     or soup.find("body")
                 )
 

@@ -9,7 +9,19 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
-from ..profiles import SiteProfile, get_profile_by_name, get_profile_for_url
+# URL normalization (optional dependency)
+try:
+    from url_normalize import url_normalize  # type: ignore[import-not-found]
+
+    URL_NORMALIZE_AVAILABLE = True
+except ImportError:
+    URL_NORMALIZE_AVAILABLE = False
+
+    def url_normalize(url: str) -> str:  # noqa: F811
+        """Stub for when url_normalize is not installed."""
+        return url
+
+
 from .async_fetcher import PLAYWRIGHT_AVAILABLE, AsyncFetcher
 from .base import BaseFetcher
 
@@ -27,9 +39,8 @@ class GenericAsyncFetcher(BaseFetcher):
 
     def __init__(
         self,
-        url_or_profile: str,
+        url: str,
         output_dir: Path,
-        profile: Optional[SiteProfile] = None,
         rate_limit: float = 0.5,
         skip_existing: bool = True,
         logger: Optional[logging.Logger] = None,
@@ -39,14 +50,19 @@ class GenericAsyncFetcher(BaseFetcher):
         use_js: bool = False,
         show_progress: bool = True,
         use_rich_metadata: bool = False,
+        include_patterns: Optional[list[str]] = None,
+        exclude_patterns: Optional[list[str]] = None,
+        proxy: Optional[str] = None,
+        max_retries: int = 3,
+        retry_base_delay: float = 1.0,
+        user_agent: Optional[str] = None,
     ) -> None:
         """
         Initialize async generic fetcher.
 
         Args:
-            url_or_profile: URL to scrape or profile name
+            url: URL to scrape
             output_dir: Directory to save documentation
-            profile: Optional SiteProfile
             rate_limit: Seconds between requests
             skip_existing: Skip existing files
             logger: Logger instance
@@ -56,6 +72,12 @@ class GenericAsyncFetcher(BaseFetcher):
             use_js: Enable JavaScript rendering (requires playwright)
             show_progress: Show progress bars
             use_rich_metadata: Extract rich structured metadata (Open Graph, JSON-LD)
+            include_patterns: URL patterns to include
+            exclude_patterns: URL patterns to exclude
+            proxy: Proxy URL for requests
+            max_retries: Maximum retry attempts for failed requests
+            retry_base_delay: Base delay for exponential backoff
+            user_agent: Custom User-Agent string
         """
         super().__init__(
             output_dir,
@@ -63,50 +85,30 @@ class GenericAsyncFetcher(BaseFetcher):
             skip_existing=skip_existing,
             logger=logger,
             use_rich_metadata=use_rich_metadata,
+            proxy=proxy,
+            user_agent=user_agent,
         )
 
-        # Determine if input is a URL or profile name
-        if url_or_profile.startswith(("http://", "https://")):
-            self.start_url = url_or_profile
-            if profile is None:
-                profile = get_profile_for_url(url_or_profile)
-                if profile:
-                    self.logger.info(f"Auto-detected profile: {profile.name}")
-        else:
-            profile = get_profile_by_name(url_or_profile)
-            if profile is None:
-                raise ValueError(f"Unknown profile: {url_or_profile}")
-            start_url_candidate = profile.base_url or (profile.start_urls[0] if profile.start_urls else None)
-            if not start_url_candidate:
-                raise ValueError(f"Profile {url_or_profile} has no start URL")
-            self.start_url = start_url_candidate
-            self.logger.info(f"Using profile: {profile.name}")
+        # Store retry settings for AsyncFetcher
+        self.max_retries = max_retries
+        self.retry_base_delay = retry_base_delay
 
-        self.profile = profile
+        if not url.startswith(("http://", "https://")):
+            raise ValueError(f"Invalid URL: {url}. Must start with http:// or https://")
+
+        self.start_url = url
         self.max_pages = max_pages
         self.max_depth = max_depth
         self.max_concurrent = max_concurrent
         self.use_js = use_js
         self.show_progress = show_progress
 
-        # Set defaults from profile
-        if profile:
-            self.rate_limit = profile.rate_limit
-            self.sitemap_url = profile.sitemap_url
-            self.base_url = profile.base_url or self._extract_base_url(self.start_url)
-            self.include_patterns = profile.include_patterns
-            self.exclude_patterns = profile.exclude_patterns
-            self.output_subdir = profile.output_subdir or urlparse(self.start_url).netloc.replace(".", "_")
-            self.strip_prefix = profile.strip_prefix
-            self.follow_links = profile.follow_links
-        else:
-            self.sitemap_url = self._guess_sitemap_url(self.start_url)
-            self.base_url = self._extract_base_url(self.start_url)
-            self.include_patterns = [self.base_url]
-            self.exclude_patterns = []
-            self.output_subdir = urlparse(self.start_url).netloc.replace(".", "_")
-            self.strip_prefix = None
-            self.follow_links = False
+        # Infer settings from URL
+        self.sitemap_url = self._guess_sitemap_url(self.start_url)
+        self.base_url = self._extract_base_url(self.start_url)
+        self.include_patterns = include_patterns or [self.base_url]
+        self.exclude_patterns = exclude_patterns or []
+        self.output_subdir = urlparse(self.start_url).netloc.replace(".", "_")
 
         if use_js and not PLAYWRIGHT_AVAILABLE:
             self.logger.warning("Playwright not installed. JS rendering disabled.")
@@ -119,6 +121,39 @@ class GenericAsyncFetcher(BaseFetcher):
         """Extract base URL from a full URL."""
         parsed = urlparse(url)
         return f"{parsed.scheme}://{parsed.netloc}/"
+
+    def _normalize_url(self, url: str) -> str:
+        """
+        Normalize URL for consistent deduplication.
+
+        Handles:
+        - Trailing slashes
+        - Case normalization for host
+        - URL encoding normalization
+        - Default port removal
+        - Fragment removal
+
+        Args:
+            url: URL to normalize
+
+        Returns:
+            Normalized URL string
+        """
+        if URL_NORMALIZE_AVAILABLE:
+            try:
+                result: str = url_normalize(url)
+                return result
+            except Exception:
+                pass
+
+        # Fallback: basic normalization
+        # Remove fragment
+        url = url.split("#")[0]
+        # Remove trailing slash for non-root URLs
+        parsed = urlparse(url)
+        if parsed.path and parsed.path != "/" and url.endswith("/"):
+            url = url.rstrip("/")
+        return url
 
     def _guess_sitemap_url(self, url: str) -> Optional[str]:
         """Guess sitemap URL for a given domain."""
@@ -145,13 +180,21 @@ class GenericAsyncFetcher(BaseFetcher):
         while to_visit:
             url, depth = to_visit.pop()
 
-            if url in visited or depth > max_depth:
+            # Normalize URL for deduplication
+            normalized_url = self._normalize_url(url)
+
+            if normalized_url in visited or depth > max_depth:
                 continue
 
             if not self.validate_url(url):
                 continue
 
-            visited.add(url)
+            # Check robots.txt before crawling
+            if not self.is_allowed_by_robots(url):
+                self.logger.debug(f"Skipping (robots.txt): {url}")
+                continue
+
+            visited.add(normalized_url)
             discovered.add(url)
 
             if depth >= max_depth:
@@ -168,7 +211,10 @@ class GenericAsyncFetcher(BaseFetcher):
                         continue
 
                     absolute_url = urljoin(url, href)
-                    absolute_url = absolute_url.split("#")[0].split("?")[0]
+                    # Normalize the discovered URL
+                    absolute_url = self._normalize_url(absolute_url)
+                    # Remove query strings for cleaner URLs
+                    absolute_url = absolute_url.split("?")[0]
 
                     if not any(pattern in absolute_url for pattern in self.include_patterns):
                         continue
@@ -208,16 +254,9 @@ class GenericAsyncFetcher(BaseFetcher):
                     urls.update(sitemap_urls)
                     progress.update(task, description=f"Found {len(sitemap_urls)} URLs in sitemap")
 
-            # Add start URLs
-            if self.profile and self.profile.start_urls:
-                urls.update(self.profile.start_urls)
-
-            # Crawl links if needed
-            if self.follow_links or (not urls and not self.sitemap_url):
+            # Crawl links if no sitemap found
+            if not urls:
                 start_urls = {self.start_url}
-                if self.profile and self.profile.start_urls:
-                    start_urls.update(self.profile.start_urls)
-
                 progress.update(task, description=f"Crawling links from {len(start_urls)} URL(s)...")
                 crawled_urls = self._crawl_links(start_urls, self.max_depth)
                 urls.update(crawled_urls)
@@ -249,14 +288,11 @@ class GenericAsyncFetcher(BaseFetcher):
         # Prepare URL/path pairs
         url_output_pairs = []
         for url in urls_list:
-            if self.profile and self.base_url:
-                filepath = self.create_output_path(url, self.base_url, self.output_subdir, self.strip_prefix)
-            else:
-                parsed = urlparse(url)
-                path = parsed.path.strip("/")
-                if not path:
-                    path = "index"
-                filepath = self.output_dir / self.output_subdir / f"{path.replace('/', '_')}.md"
+            parsed = urlparse(url)
+            path = parsed.path.strip("/")
+            if not path:
+                path = "index"
+            filepath = self.output_dir / self.output_subdir / f"{path.replace('/', '_')}.md"
             url_output_pairs.append((url, filepath))
 
         # Fetch URLs with progress bar

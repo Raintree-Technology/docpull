@@ -54,7 +54,6 @@ git checkout -b fix/your-bug-fix
 - Follow existing code style (enforced by pre-commit hooks)
 - Add tests for new functionality
 - Update documentation as needed
-- Update CHANGELOG.md with your changes
 
 3. **Run tests and linting**
 
@@ -121,19 +120,17 @@ Pre-commit hooks will automatically:
 ## Documentation
 
 - Update README.md for user-facing changes
-- Update CHANGELOG.md with all changes
 - Add docstrings to new functions/classes
-- Update TROUBLESHOOTING.md for common issues
+- Update examples/ if adding new features
 
 ## Pull Request Process
 
 1. **Ensure all tests pass**
-2. **Update CHANGELOG.md** with your changes
-3. **Update documentation** as needed
-4. **Fill out the PR template** completely
-5. **Wait for review** - maintainers will review your PR
-6. **Address feedback** - make requested changes
-7. **Merge** - once approved, maintainers will merge
+2. **Update documentation** as needed
+3. **Fill out the PR template** completely
+4. **Wait for review** - maintainers will review your PR
+5. **Address feedback** - make requested changes
+6. **Merge** - once approved, maintainers will merge
 
 ## Release Process
 
@@ -141,43 +138,15 @@ Releases are automated via GitHub Actions:
 
 1. Maintainer triggers release workflow
 2. Workflow updates version numbers
-3. Workflow updates CHANGELOG.md
-4. Workflow creates git tag
-5. Workflow creates GitHub release
-6. Publish workflow automatically deploys to PyPI
-
-## Adding a New Fetcher
-
-To add support for a new documentation source:
-
-1. Create `docpull/fetchers/yoursite.py`:
-
-```python
-from .base import BaseFetcher
-
-class YourSiteFetcher(BaseFetcher):
-    """Fetch documentation from YourSite."""
-
-    def __init__(self, output_dir: str = "yoursite-docs"):
-        super().__init__(output_dir)
-        self.base_url = "https://docs.yoursite.com"
-
-    def fetch_all(self) -> None:
-        # Implement fetching logic
-        pass
-```
-
-2. Register in `docpull/__init__.py`
-3. Add tests in `tests/test_yoursite.py`
-4. Update README.md with usage example
-5. Update CHANGELOG.md
+3. Workflow creates git tag
+4. Workflow creates GitHub release with changelog
+5. Publish workflow automatically deploys to PyPI
 
 ## Getting Help
 
 - Open an issue for bugs or feature requests
 - Check existing issues before creating new ones
 - Use `docpull --doctor` to diagnose issues
-- See TROUBLESHOOTING.md for common problems
 
 ## Code of Conduct
 

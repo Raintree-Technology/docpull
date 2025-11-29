@@ -270,11 +270,11 @@ Testing with 1,914 files (31 MB) from Anthropic, Claude Code, Aptos, and Shelby 
 ## Need Help?
 
 - **Documentation**: See main README.md
-- **Troubleshooting**: See TROUBLESHOOTING.md
+- **Diagnostics**: Run `docpull --doctor`
 - **Bug reports**: https://github.com/raintree-technology/docpull/issues
 - **Feature requests**: https://github.com/raintree-technology/docpull/issues
 
 ---
 
-**Version**: 1.2.0
-**Date**: 2025-11-16
+**Version**: 1.5.0
+**Date**: 2025-11-28
