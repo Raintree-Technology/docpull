@@ -223,7 +223,7 @@ class EnhancedLinkExtractor:
 
         return links
 
-    def _extract_urls_from_json(self, data: dict | list, base_url: str) -> list[str]:
+    def _extract_urls_from_json(self, data: "dict | list", base_url: str) -> list[str]:
         """Recursively extract URLs from JSON-LD data."""
         urls = []
 
@@ -236,12 +236,12 @@ class EnhancedLinkExtractor:
                     resolved = self._resolve_url(value, base_url)
                     if resolved:
                         urls.append(resolved)
-                elif isinstance(value, dict | list):
+                elif isinstance(value, (dict, list)):
                     urls.extend(self._extract_urls_from_json(value, base_url))
 
         elif isinstance(data, list):
             for item in data:
-                if isinstance(item, dict | list):
+                if isinstance(item, (dict, list)):
                     urls.extend(self._extract_urls_from_json(item, base_url))
                 elif isinstance(item, str):
                     # sameAs can be a list of URLs
