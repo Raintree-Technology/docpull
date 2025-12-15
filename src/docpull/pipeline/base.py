@@ -1,8 +1,10 @@
 """Base classes for the fetch pipeline architecture."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional, Protocol, runtime_checkable
+from typing import Callable, Protocol, runtime_checkable
 
 from ..models.events import EventType, FetchEvent
 
@@ -33,24 +35,24 @@ class PageContext:
     output_path: Path
 
     # Content (accumulated through pipeline)
-    html: Optional[bytes] = None
-    markdown: Optional[str] = None
+    html: bytes | None = None
+    markdown: str | None = None
     metadata: dict = field(default_factory=dict)
-    title: Optional[str] = None
+    title: str | None = None
 
     # Status
     should_skip: bool = False
-    skip_reason: Optional[str] = None
-    error: Optional[str] = None
+    skip_reason: str | None = None
+    error: str | None = None
 
     # Additional data from fetch
-    status_code: Optional[int] = None
-    content_type: Optional[str] = None
+    status_code: int | None = None
+    content_type: str | None = None
     bytes_downloaded: int = 0
 
     # HTTP caching headers (for incremental updates)
-    etag: Optional[str] = None
-    last_modified: Optional[str] = None
+    etag: str | None = None
+    last_modified: str | None = None
 
 
 @runtime_checkable
@@ -87,7 +89,7 @@ class FetchStep(Protocol):
     async def execute(
         self,
         ctx: PageContext,
-        emit: Optional[EventEmitter] = None,
+        emit: EventEmitter | None = None,
     ) -> PageContext:
         """
         Execute this pipeline step.
@@ -135,7 +137,7 @@ class FetchPipeline:
         self,
         url: str,
         output_path: Path,
-        emit: Optional[EventEmitter] = None,
+        emit: EventEmitter | None = None,
     ) -> PageContext:
         """
         Execute the pipeline for a URL.
@@ -173,7 +175,7 @@ class FetchPipeline:
 
         return ctx
 
-    def add_step(self, step: FetchStep) -> "FetchPipeline":
+    def add_step(self, step: FetchStep) -> FetchPipeline:
         """
         Add a step to the pipeline (fluent API).
 

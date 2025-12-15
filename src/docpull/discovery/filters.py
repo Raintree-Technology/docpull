@@ -1,8 +1,9 @@
 """URL filtering utilities for discovery."""
 
+from __future__ import annotations
+
 import fnmatch
 import logging
-from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
 logger = logging.getLogger(__name__)
@@ -71,8 +72,8 @@ class PatternFilter:
 
     def __init__(
         self,
-        include_patterns: Optional[list[str]] = None,
-        exclude_patterns: Optional[list[str]] = None,
+        include_patterns: list[str] | None = None,
+        exclude_patterns: list[str] | None = None,
     ):
         """
         Initialize the pattern filter.
@@ -122,7 +123,7 @@ class DomainFilter:
         self,
         base_url: str,
         allow_subdomains: bool = False,
-        additional_domains: Optional[set[str]] = None,
+        additional_domains: set[str] | None = None,
     ):
         """
         Initialize the domain filter.

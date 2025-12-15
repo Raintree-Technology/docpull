@@ -1,7 +1,8 @@
 """robots.txt compliance checker."""
 
+from __future__ import annotations
+
 import logging
-from typing import Optional
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -31,7 +32,7 @@ class RobotsChecker:
         self,
         user_agent: str = "docpull",
         timeout: float = 10.0,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
     ):
         """
         Initialize the robots.txt checker.
@@ -46,7 +47,7 @@ class RobotsChecker:
         self.logger = logger or logging.getLogger(__name__)
 
         # Cache: domain -> RobotFileParser (or None if fetch failed)
-        self._cache: dict[str, Optional[RobotFileParser]] = {}
+        self._cache: dict[str, RobotFileParser | None] = {}
 
     def _get_robots_url(self, url: str) -> str:
         """Get robots.txt URL for a given page URL."""
@@ -57,7 +58,7 @@ class RobotsChecker:
         """Extract domain from URL."""
         return urlparse(url).netloc
 
-    def _fetch_robots(self, domain: str, robots_url: str) -> Optional[RobotFileParser]:
+    def _fetch_robots(self, domain: str, robots_url: str) -> RobotFileParser | None:
         """
         Fetch and parse robots.txt for a domain.
 
@@ -94,7 +95,7 @@ class RobotsChecker:
             self.logger.warning(f"Failed to fetch robots.txt for {domain}: {e}")
             return None
 
-    def _get_parser(self, url: str) -> Optional[RobotFileParser]:
+    def _get_parser(self, url: str) -> RobotFileParser | None:
         """
         Get or fetch RobotFileParser for a URL's domain.
 
@@ -135,7 +136,7 @@ class RobotsChecker:
             # On error, allow by default (be permissive)
             return True
 
-    def get_crawl_delay(self, url: str) -> Optional[float]:
+    def get_crawl_delay(self, url: str) -> float | None:
         """
         Get Crawl-delay directive for a URL's domain.
 

@@ -1,8 +1,9 @@
 """Sitemap-based URL discovery."""
 
+from __future__ import annotations
+
 import logging
 from collections.abc import AsyncIterator
-from typing import Optional
 from urllib.parse import urlparse
 
 from defusedxml import ElementTree
@@ -44,8 +45,8 @@ class SitemapDiscoverer:
         self,
         http_client: HttpClient,
         url_validator: UrlValidator,
-        pattern_filter: Optional[PatternFilter] = None,
-        robots_checker: Optional[RobotsChecker] = None,
+        pattern_filter: PatternFilter | None = None,
+        robots_checker: RobotsChecker | None = None,
     ):
         """
         Initialize the sitemap discoverer.
@@ -104,7 +105,7 @@ class SitemapDiscoverer:
             f"{base}/sitemaps/sitemap.xml",
         ]
 
-    async def _fetch_sitemap(self, url: str) -> Optional[bytes]:
+    async def _fetch_sitemap(self, url: str) -> bytes | None:
         """
         Fetch sitemap content with size validation.
 
@@ -178,7 +179,7 @@ class SitemapDiscoverer:
         self,
         sitemap_url: str,
         depth: int = 0,
-        max_urls: Optional[int] = None,
+        max_urls: int | None = None,
     ) -> AsyncIterator[str]:
         """
         Recursively discover URLs from a sitemap.
@@ -242,7 +243,7 @@ class SitemapDiscoverer:
         self,
         start_url: str,
         *,
-        max_urls: Optional[int] = None,
+        max_urls: int | None = None,
     ) -> AsyncIterator[str]:
         """
         Discover URLs from sitemap for a website.

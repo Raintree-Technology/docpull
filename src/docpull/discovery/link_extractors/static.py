@@ -1,7 +1,8 @@
 """Static HTML link extraction using BeautifulSoup."""
 
+from __future__ import annotations
+
 import logging
-from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -42,7 +43,7 @@ class StaticLinkExtractor:
     async def extract_links(
         self,
         url: str,
-        content: Optional[bytes] = None,
+        content: bytes | None = None,
     ) -> list[str]:
         """
         Extract links from HTML using BeautifulSoup.
@@ -61,7 +62,7 @@ class StaticLinkExtractor:
 
         return self._parse_links(content, url)
 
-    async def _fetch_content(self, url: str) -> Optional[bytes]:
+    async def _fetch_content(self, url: str) -> bytes | None:
         """
         Fetch page content for link extraction.
 
@@ -134,7 +135,7 @@ class StaticLinkExtractor:
 
         return all(not href.startswith(prefix) for prefix in self.SKIP_PREFIXES)
 
-    def _resolve_url(self, href: str, base_url: str) -> Optional[str]:
+    def _resolve_url(self, href: str, base_url: str) -> str | None:
         """
         Resolve and clean a URL.
 

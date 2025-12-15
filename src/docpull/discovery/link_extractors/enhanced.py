@@ -1,9 +1,10 @@
 """Enhanced link extraction with data attributes, onclick handlers, and JSON-LD."""
 
+from __future__ import annotations
+
 import json
 import logging
 import re
-from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -65,7 +66,7 @@ class EnhancedLinkExtractor:
         enable_onclick: bool = True,
         enable_json_ld: bool = True,
         enable_prefetch: bool = True,
-        custom_data_attrs: Optional[list[str]] = None,
+        custom_data_attrs: list[str] | None = None,
     ):
         """
         Initialize the enhanced link extractor.
@@ -90,7 +91,7 @@ class EnhancedLinkExtractor:
     async def extract_links(
         self,
         url: str,
-        content: Optional[bytes] = None,
+        content: bytes | None = None,
     ) -> list[str]:
         """
         Extract links using enhanced patterns.
@@ -136,7 +137,7 @@ class EnhancedLinkExtractor:
 
         return list(links)
 
-    async def _fetch_content(self, url: str) -> Optional[bytes]:
+    async def _fetch_content(self, url: str) -> bytes | None:
         """
         Fetch page content for link extraction.
 
@@ -223,7 +224,7 @@ class EnhancedLinkExtractor:
 
         return links
 
-    def _extract_urls_from_json(self, data: "dict | list", base_url: str) -> list[str]:
+    def _extract_urls_from_json(self, data: dict | list, base_url: str) -> list[str]:
         """Recursively extract URLs from JSON-LD data."""
         urls = []
 
@@ -287,7 +288,7 @@ class EnhancedLinkExtractor:
 
         return all(not href.startswith(prefix) for prefix in self.SKIP_PREFIXES)
 
-    def _resolve_url(self, href: str, base_url: str) -> Optional[str]:
+    def _resolve_url(self, href: str, base_url: str) -> str | None:
         """Resolve and clean a URL."""
         if not self._is_valid_href(href):
             return None

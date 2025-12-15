@@ -1,9 +1,11 @@
 """Link crawling URL discovery."""
 
+from __future__ import annotations
+
 import logging
 from collections import deque
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -44,9 +46,9 @@ class LinkCrawler:
         url_validator: UrlValidator,
         robots_checker: RobotsChecker,
         max_depth: int = 5,
-        pattern_filter: Optional[PatternFilter] = None,
+        pattern_filter: PatternFilter | None = None,
         stay_on_domain: bool = True,
-        link_extractor: Optional["LinkExtractor"] = None,
+        link_extractor: LinkExtractor | None = None,
     ):
         """
         Initialize the link crawler.
@@ -68,7 +70,7 @@ class LinkCrawler:
         self._stay_on_domain = stay_on_domain
         self._link_extractor = link_extractor
         self._seen = SeenUrlTracker()
-        self._domain_filter: Optional[DomainFilter] = None
+        self._domain_filter: DomainFilter | None = None
 
     def _extract_links(self, html: bytes, base_url: str) -> list[str]:
         """
@@ -112,7 +114,7 @@ class LinkCrawler:
 
         return links
 
-    async def _fetch_page(self, url: str) -> Optional[bytes]:
+    async def _fetch_page(self, url: str) -> bytes | None:
         """
         Fetch a page for link extraction.
 
@@ -168,8 +170,8 @@ class LinkCrawler:
         self,
         start_url: str,
         *,
-        max_urls: Optional[int] = None,
-        max_depth: Optional[int] = None,
+        max_urls: int | None = None,
+        max_depth: int | None = None,
     ) -> AsyncIterator[str]:
         """
         Discover URLs by crawling from a starting point.

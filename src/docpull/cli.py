@@ -1,10 +1,11 @@
 """Command-line interface for docpull."""
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import sys
 from pathlib import Path
-from typing import Optional
 
 # Check if --doctor flag is present before checking dependencies
 if "--doctor" in sys.argv:
@@ -504,7 +505,7 @@ def run_fetcher(args: argparse.Namespace) -> int:
     return asyncio.run(run())
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """Main entry point."""
     parser = create_parser()
     args = parser.parse_args(argv)

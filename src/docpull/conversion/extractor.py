@@ -1,8 +1,9 @@
 """Main content extraction from HTML pages."""
 
+from __future__ import annotations
+
 import logging
 import re
-from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup, Tag
@@ -103,8 +104,8 @@ class MainContentExtractor:
 
     def __init__(
         self,
-        content_selectors: Optional[list[str]] = None,
-        remove_selectors: Optional[list[str]] = None,
+        content_selectors: list[str] | None = None,
+        remove_selectors: list[str] | None = None,
         preserve_images: bool = True,
         preserve_code_blocks: bool = True,
     ):
@@ -146,7 +147,7 @@ class MainContentExtractor:
             text = html.decode("utf-8", errors="replace")
         return BeautifulSoup(text, "html.parser")
 
-    def _find_main_content(self, soup: BeautifulSoup) -> Optional[Tag]:
+    def _find_main_content(self, soup: BeautifulSoup) -> Tag | None:
         """Find the main content element using selectors."""
         for selector in self._content_selectors:
             element = soup.select_one(selector)

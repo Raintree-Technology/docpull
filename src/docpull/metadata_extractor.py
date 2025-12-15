@@ -1,7 +1,9 @@
 """Rich metadata extraction from HTML using structured data."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Optional, TypedDict
+from typing import Any, TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -11,24 +13,24 @@ class RichMetadata(TypedDict, total=False):
 
     # Basic fields (always present)
     url: str
-    title: Optional[str]
+    title: str | None
 
     # Open Graph fields
-    description: Optional[str]
-    image: Optional[str]
-    type: Optional[str]
-    site_name: Optional[str]
+    description: str | None
+    image: str | None
+    type: str | None
+    site_name: str | None
 
     # Article-specific
-    author: Optional[str]
-    published_time: Optional[str]
-    modified_time: Optional[str]
-    section: Optional[str]
-    tags: Optional[list[str]]
+    author: str | None
+    published_time: str | None
+    modified_time: str | None
+    section: str | None
+    tags: list[str] | None
 
     # SEO/Meta fields
-    keywords: Optional[list[str]]
-    canonical_url: Optional[str]
+    keywords: list[str] | None
+    canonical_url: str | None
 
 
 class RichMetadataExtractor:
@@ -260,7 +262,7 @@ class RichMetadataExtractor:
         return str(value).strip()
 
     def merge_with_fallback(
-        self, rich_metadata: RichMetadata, fallback_title: Optional[str] = None
+        self, rich_metadata: RichMetadata, fallback_title: str | None = None
     ) -> dict[str, Any]:
         """Merge rich metadata with fallback values.
 

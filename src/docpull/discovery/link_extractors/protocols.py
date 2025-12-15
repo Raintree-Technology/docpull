@@ -1,6 +1,8 @@
 """Protocol definitions for link extraction."""
 
-from typing import Optional, Protocol
+from __future__ import annotations
+
+from typing import Protocol
 
 
 class LinkExtractor(Protocol):
@@ -16,7 +18,7 @@ class LinkExtractor(Protocol):
     async def extract_links(
         self,
         url: str,
-        content: Optional[bytes] = None,
+        content: bytes | None = None,
     ) -> list[str]:
         """
         Extract links from a page.
