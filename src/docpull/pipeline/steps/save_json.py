@@ -1,5 +1,7 @@
 """JsonSaveStep - JSON output pipeline step with streaming writes."""
 
+from __future__ import annotations
+
 import contextlib
 import json
 import logging
@@ -7,7 +9,7 @@ import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, TextIO
+from typing import TextIO
 
 from ...models.events import EventType, FetchEvent
 from ..base import EventEmitter, PageContext
@@ -58,8 +60,8 @@ class JsonSaveStep:
         self._base_dir = base_output_dir.resolve()
         self._output_file = self._base_dir / filename
         self._document_count = 0
-        self._temp_file: Optional[TextIO] = None
-        self._temp_path: Optional[str] = None
+        self._temp_file: TextIO | None = None
+        self._temp_path: str | None = None
         self._first_doc = True
 
     def _ensure_temp_file(self) -> TextIO:
@@ -80,7 +82,7 @@ class JsonSaveStep:
     async def execute(
         self,
         ctx: PageContext,
-        emit: Optional[EventEmitter] = None,
+        emit: EventEmitter | None = None,
     ) -> PageContext:
         """
         Execute the JSON streaming step.

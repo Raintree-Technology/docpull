@@ -1,11 +1,12 @@
 """Per-host rate limiting for polite crawling."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ class PerHostRateLimiter:
         self,
         default_delay: float = 0.5,
         default_concurrent: int = 3,
-        host_configs: Optional[dict[str, dict]] = None,
+        host_configs: dict[str, dict] | None = None,
     ):
         """
         Initialize the rate limiter.
@@ -118,8 +119,8 @@ class PerHostRateLimiter:
     def update_host_config(
         self,
         host: str,
-        delay: Optional[float] = None,
-        concurrent: Optional[int] = None,
+        delay: float | None = None,
+        concurrent: int | None = None,
     ) -> None:
         """
         Update configuration for a specific host.
@@ -174,7 +175,7 @@ class AdaptiveRateLimiter(PerHostRateLimiter):
         self,
         default_delay: float = 0.5,
         default_concurrent: int = 3,
-        host_configs: Optional[dict[str, dict]] = None,
+        host_configs: dict[str, dict] | None = None,
         min_delay: float = 0.1,
         max_delay: float = 60.0,
         backoff_factor: float = 2.0,
@@ -203,7 +204,7 @@ class AdaptiveRateLimiter(PerHostRateLimiter):
         self._current_delays: dict[str, float] = {}
         self._adaptive_lock = asyncio.Lock()
 
-    async def record_rate_limit(self, url: str, retry_after: Optional[int] = None) -> None:
+    async def record_rate_limit(self, url: str, retry_after: int | None = None) -> None:
         """
         Record a 429 response and increase delay for the host.
 

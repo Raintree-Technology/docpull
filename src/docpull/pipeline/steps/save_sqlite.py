@@ -1,11 +1,12 @@
 """SqliteSaveStep - SQLite output pipeline step."""
 
+from __future__ import annotations
+
 import json
 import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from ...models.events import EventType, FetchEvent
 from ..base import EventEmitter, PageContext
@@ -50,7 +51,7 @@ class SqliteSaveStep:
         """
         self._base_dir = base_output_dir.resolve()
         self._db_path = self._base_dir / filename
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conn: sqlite3.Connection | None = None
         self._document_count = 0
         self._pending_count = 0  # Track uncommitted documents
 
@@ -83,7 +84,7 @@ class SqliteSaveStep:
     async def execute(
         self,
         ctx: PageContext,
-        emit: Optional[EventEmitter] = None,
+        emit: EventEmitter | None = None,
     ) -> PageContext:
         """
         Execute the SQLite save step.

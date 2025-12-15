@@ -1,8 +1,10 @@
 """Pydantic configuration models for docpull v2.0."""
 
+from __future__ import annotations
+
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -75,7 +77,7 @@ class ByteSize(int):
 class CrawlConfig(BaseModel):
     """Configuration for URL discovery and crawling behavior."""
 
-    max_pages: Optional[int] = Field(None, description="Maximum pages to fetch (None = unlimited)")
+    max_pages: int | None = Field(None, description="Maximum pages to fetch (None = unlimited)")
     max_depth: int = Field(5, ge=1, description="Maximum crawl depth from starting URL")
     max_concurrent: int = Field(10, ge=1, description="Maximum concurrent requests globally")
     rate_limit: float = Field(0.5, ge=0, description="Minimum seconds between requests to same host")
@@ -94,7 +96,7 @@ class CrawlConfig(BaseModel):
 class ContentFilterConfig(BaseModel):
     """Configuration for content filtering and deduplication."""
 
-    language: Optional[str] = Field(
+    language: str | None = Field(
         None,
         pattern=r"^[a-z]{2}$",
         description="ISO 639-1 language code to keep (e.g., 'en')",
@@ -108,11 +110,11 @@ class ContentFilterConfig(BaseModel):
         False,
         description="Enable real-time deduplication during fetch (more efficient)",
     )
-    max_file_size: Optional[ByteSize] = Field(
+    max_file_size: ByteSize | None = Field(
         None,
         description="Maximum size per file (e.g., '200kb', '1mb')",
     )
-    max_total_size: Optional[ByteSize] = Field(
+    max_total_size: ByteSize | None = Field(
         None,
         description="Maximum total download size (e.g., '100mb', '1gb')",
     )
@@ -145,7 +147,7 @@ class OutputConfig(BaseModel):
     model_config = {"extra": "forbid"}
 
 
-def _expand_env_var(value: Optional[str]) -> Optional[str]:
+def _expand_env_var(value: str | None) -> str | None:
     """Expand environment variable references in a string.
 
     Supports $VAR and ${VAR} syntax. Returns original value if
@@ -177,12 +179,12 @@ class AuthConfig(BaseModel):
     """
 
     type: AuthType = Field(AuthType.NONE, description="Authentication type")
-    token: Optional[str] = Field(None, description="Bearer token or API key")
-    username: Optional[str] = Field(None, description="Username for basic auth")
-    password: Optional[str] = Field(None, description="Password for basic auth")
-    cookie: Optional[str] = Field(None, description="Cookie string for cookie auth")
-    header_name: Optional[str] = Field(None, description="Custom header name for header auth")
-    header_value: Optional[str] = Field(None, description="Custom header value for header auth")
+    token: str | None = Field(None, description="Bearer token or API key")
+    username: str | None = Field(None, description="Username for basic auth")
+    password: str | None = Field(None, description="Password for basic auth")
+    cookie: str | None = Field(None, description="Cookie string for cookie auth")
+    header_name: str | None = Field(None, description="Custom header name for header auth")
+    header_value: str | None = Field(None, description="Custom header value for header auth")
 
     model_config = {"extra": "forbid"}
 
@@ -202,8 +204,8 @@ class AuthConfig(BaseModel):
 class NetworkConfig(BaseModel):
     """Configuration for HTTP client and network behavior."""
 
-    proxy: Optional[str] = Field(None, description="HTTP/HTTPS proxy URL")
-    user_agent: Optional[str] = Field(None, description="Custom User-Agent header")
+    proxy: str | None = Field(None, description="HTTP/HTTPS proxy URL")
+    user_agent: str | None = Field(None, description="Custom User-Agent header")
     max_retries: int = Field(3, ge=0, description="Maximum retry attempts for failed requests")
     connect_timeout: int = Field(10, ge=1, description="Connection timeout in seconds")
     read_timeout: int = Field(30, ge=5, description="Read timeout in seconds")
@@ -241,7 +243,7 @@ class IntegrationConfig(BaseModel):
         "tar.gz",
         description="Archive format",
     )
-    post_process_hook: Optional[Path] = Field(
+    post_process_hook: Path | None = Field(
         None,
         description="Path to post-processing hook script",
     )
@@ -254,7 +256,7 @@ class CacheConfig(BaseModel):
 
     enabled: bool = Field(False, description="Enable caching for incremental updates")
     directory: Path = Field(Path(".docpull-cache"), description="Cache directory")
-    ttl_days: Optional[int] = Field(
+    ttl_days: int | None = Field(
         30,
         ge=1,
         description="Days before cache entries expire (None = no expiry)",
@@ -296,7 +298,7 @@ class DocpullConfig(BaseModel):
         ProfileName.CUSTOM,
         description="Built-in profile to apply (rag, mirror, quick, custom)",
     )
-    url: Optional[str] = Field(None, description="Target URL to fetch")
+    url: str | None = Field(None, description="Target URL to fetch")
 
     # Nested configuration sections
     crawl: CrawlConfig = Field(default_factory=CrawlConfig)
@@ -313,7 +315,7 @@ class DocpullConfig(BaseModel):
         "INFO",
         description="Logging level",
     )
-    log_file: Optional[Path] = Field(None, description="Log file path")
+    log_file: Path | None = Field(None, description="Log file path")
     dry_run: bool = Field(False, description="Simulate without writing files")
 
     model_config = {"extra": "forbid"}
@@ -325,7 +327,7 @@ class DocpullConfig(BaseModel):
         return yaml.dump(self.model_dump(mode="json", exclude_none=True), default_flow_style=False)
 
     @classmethod
-    def from_yaml(cls, yaml_str: str) -> "DocpullConfig":
+    def from_yaml(cls, yaml_str: str) -> DocpullConfig:
         """Load config from YAML string."""
         import yaml
 
@@ -333,6 +335,6 @@ class DocpullConfig(BaseModel):
         return cls.model_validate(data)
 
     @classmethod
-    def from_yaml_file(cls, path: Path) -> "DocpullConfig":
+    def from_yaml_file(cls, path: Path) -> DocpullConfig:
         """Load config from YAML file."""
         return cls.from_yaml(path.read_text())

@@ -1,11 +1,13 @@
 """Cache management for update detection and incremental fetching."""
 
+from __future__ import annotations
+
 import hashlib
 import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, TypedDict, Union
+from typing import TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class CacheState(TypedDict, total=False):
 
     fetched_urls: list[str]
     failed_urls: list[str]
-    last_run: Optional[str]
+    last_run: str | None
 
 
 class DiscoveredUrlsState(TypedDict, total=False):
@@ -46,10 +48,10 @@ class _InternalState:
     def __init__(self) -> None:
         self.fetched_urls: set[str] = set()
         self.failed_urls: set[str] = set()
-        self.last_run: Optional[str] = None
+        self.last_run: str | None = None
 
     @classmethod
-    def from_cache_state(cls, state: CacheState) -> "_InternalState":
+    def from_cache_state(cls, state: CacheState) -> _InternalState:
         """Create internal state from serialized CacheState."""
         internal = cls()
         internal.fetched_urls = set(state.get("fetched_urls", []))
@@ -76,7 +78,7 @@ class CacheManager:
     - Consistent hashing: Uses bytes input for SHA-256 computation
     """
 
-    def __init__(self, cache_dir: Path, ttl_days: Optional[int] = None):
+    def __init__(self, cache_dir: Path, ttl_days: int | None = None):
         """Initialize cache manager.
 
         Args:
@@ -166,21 +168,21 @@ class CacheManager:
         self._save_manifest()
         self._save_state()
 
-    def __enter__(self) -> "CacheManager":
+    def __enter__(self) -> CacheManager:
         """Context manager entry."""
         return self
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[object],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object | None,
     ) -> None:
         """Context manager exit - auto-flush on exit."""
         self.flush()
 
     @staticmethod
-    def compute_checksum(content: Union[str, bytes]) -> str:
+    def compute_checksum(content: str | bytes) -> str:
         """Compute SHA-256 checksum of content.
 
         Args:
@@ -196,9 +198,9 @@ class CacheManager:
     def has_changed(
         self,
         url: str,
-        content: Optional[str] = None,
-        etag: Optional[str] = None,
-        last_modified: Optional[str] = None,
+        content: str | None = None,
+        etag: str | None = None,
+        last_modified: str | None = None,
     ) -> bool:
         """Check if content has changed since last fetch.
 
@@ -235,10 +237,10 @@ class CacheManager:
     def update_cache(
         self,
         url: str,
-        content: Union[str, bytes],
+        content: str | bytes,
         file_path: Path,
-        etag: Optional[str] = None,
-        last_modified: Optional[str] = None,
+        etag: str | None = None,
+        last_modified: str | None = None,
     ) -> None:
         """Update cache entry for a URL.
 
@@ -326,7 +328,7 @@ class CacheManager:
         self.flush()
         logger.info("Cleared incremental state")
 
-    def get_cache_stats(self) -> dict[str, Union[str, int, None]]:
+    def get_cache_stats(self) -> dict[str, str | int | None]:
         """Get cache statistics.
 
         Returns:
@@ -339,7 +341,7 @@ class CacheManager:
             "last_run": self._state.last_run,
         }
 
-    def evict_expired(self, ttl_days: Optional[int] = None) -> int:
+    def evict_expired(self, ttl_days: int | None = None) -> int:
         """Remove cache entries older than TTL.
 
         Args:
