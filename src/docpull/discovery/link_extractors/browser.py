@@ -106,7 +106,7 @@ class BrowserLinkExtractor:
                 # Set up network interception
                 if self._intercept:
 
-                    def handle_request(request: Request) -> None:
+                    def handle_request(request: Request) -> None:  # type: ignore[no-any-unimported]
                         # Capture navigation and API requests
                         if request.resource_type in ("document", "xhr", "fetch"):
                             req_url = request.url
